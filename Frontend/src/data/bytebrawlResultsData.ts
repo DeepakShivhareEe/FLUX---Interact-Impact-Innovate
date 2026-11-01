@@ -108,7 +108,7 @@ export const FINAL_RESULT_META = {
   ],
   institution: 'Madan Mohan Malaviya University of Technology, Gorakhpur, Uttar Pradesh',
   // Official Instagram link for ByteBrawl announcement (update with specific post link when provided)
-  instagramUrl: 'https://www.instagram.com/flux.mmmut?igsh=aHI5c3Z1dGZwOGI2',
+  instagramUrl: 'https://www.instagram.com/p/DfHywq5z4yb/',
 };
 
 export interface LeaderboardTeam {
