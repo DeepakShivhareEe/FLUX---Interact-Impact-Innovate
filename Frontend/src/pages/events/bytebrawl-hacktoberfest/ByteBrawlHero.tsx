@@ -40,7 +40,7 @@ export default function ByteBrawlHero({
             >
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-amber-300 font-semibold">
-                // QUALIFIED TEAMS & ROUND 2 ALLOTMENTS LIVE //
+                // FINAL ROUND WINNERS DECLARED //
               </span>
               <span className="text-[10px] text-white/40 font-mono hidden sm:inline">
                 | CSE DEPT MMMUT
@@ -131,8 +131,8 @@ export default function ByteBrawlHero({
                 href="#results-and-allotments"
                 className="group relative inline-flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 text-black font-mono text-xs uppercase tracking-widest font-extrabold shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.6)] hover:brightness-110 transition-all duration-300 cursor-pointer active:scale-[0.98]"
               >
-                <Users className="w-4 h-4 text-black" />
-                <span>Teams & PS Allotments</span>
+                <Trophy className="w-4 h-4 text-black fill-black" />
+                <span>View Winners Podium 🏆</span>
                 <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
               </a>
 

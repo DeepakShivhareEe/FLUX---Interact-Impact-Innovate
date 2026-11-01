@@ -5,7 +5,6 @@ import ByteBrawlHero from "./ByteBrawlHero";
 import ByteBrawlWinnersLeaderboard from "./ByteBrawlWinnersLeaderboard";
 import AboutByteBrawl from "./AboutByteBrawl";
 import AboutHacktoberfest from "./AboutHacktoberfest";
-import EventDetailsGrid from "./EventDetailsGrid";
 import RulesAndFAQ from "./RulesAndFAQ";
 import PaintEdgeDivider from "@/components/ui/PaintEdgeDivider";
 import Container from "@/components/layout/Container";
@@ -70,15 +69,9 @@ export default function ByteBrawlPage({ isMobile: _isMobile }: ByteBrawlPageProp
       <AboutHacktoberfest />
 
       {/* Paint Edge Divider */}
-      <PaintEdgeDivider topColor="#080808" bottomColor="#0c0c0c" />
+      <PaintEdgeDivider topColor="#080808" bottomColor="#090909" flip />
 
-      {/* 4. Event Details Grid (Format, Team Size, Eligibility, Prizes) */}
-      <EventDetailsGrid />
-
-      {/* Paint Edge Divider */}
-      <PaintEdgeDivider topColor="#0c0c0c" bottomColor="#090909" flip />
-
-      {/* 5. Rules & Directives + FAQ Accordion */}
+      {/* 4. Rules & Directives + FAQ Accordion */}
       <RulesAndFAQ />
 
       {/* Paint Edge Divider */}

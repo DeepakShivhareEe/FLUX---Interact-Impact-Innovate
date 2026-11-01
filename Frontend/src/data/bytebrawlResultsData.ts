@@ -1,7 +1,115 @@
 // ByteBrawl x Hacktoberfest Results & Round 2 Allotment Dataset
-// Source 1: ByteBrawl_Result_with_Teams.xlsx
-// Source 2: ByteBrawl_Round2_PS_Allotment_fixed (1).xlsx
-// Source 3: secound_round_ps_sha256_014122a9eceb6516028ba05d1f32697836b43e46b63d4ecdc4e270d7e1e49f7a.pdf
+// Source 1: Final Res.pdf (Final Round Official Results)
+// Source 2: ByteBrawl_Result_with_Teams.xlsx
+// Source 3: ByteBrawl_Round2_PS_Allotment_fixed (1).xlsx
+// Source 4: secound_round_ps_sha256_014122a9eceb6516028ba05d1f32697836b43e46b63d4ecdc4e270d7e1e49f7a.pdf
+
+export interface FinalWinnerMember {
+  name: string;
+  college: string;
+}
+
+export interface FinalWinner {
+  position: string;
+  rank: number;
+  badge: string;
+  teamName: string;
+  members: FinalWinnerMember[];
+  highlight: string;
+  trophyColor: string;
+  gradient: string;
+  borderGlow: string;
+}
+
+export interface FinalSpecialAppreciation {
+  position: string;
+  rank: number;
+  teamName: string;
+  members: FinalWinnerMember[];
+  badge: string;
+}
+
+export const FINAL_WINNERS: FinalWinner[] = [
+  {
+    position: '1st',
+    rank: 1,
+    badge: 'Grand Champions // 1st Place',
+    teamName: '2 Pointer Approach',
+    members: [
+      { name: 'Satyam Prajapati', college: 'MMMUT' },
+      { name: 'Nitish Kumar', college: 'MMMUT' },
+    ],
+    highlight: 'Exceptional algorithmic precision, architectural resilience, and production-grade execution under tight constraints.',
+    trophyColor: 'text-amber-400',
+    gradient: 'from-amber-500/20 via-yellow-500/10 to-[#121008]',
+    borderGlow: 'border-amber-400/50 shadow-[0_0_40px_rgba(245,158,11,0.25)]',
+  },
+  {
+    position: '2nd',
+    rank: 2,
+    badge: '1st Runner Up // 2nd Place',
+    teamName: 'Quarks',
+    members: [
+      { name: 'Utkarsh Shukla', college: 'ITM' },
+      { name: 'Mansi Singh', college: 'ITM' },
+    ],
+    highlight: 'Stunning innovation, rapid technical prototyping, and comprehensive implementation across Bharat challenges.',
+    trophyColor: 'text-slate-300',
+    gradient: 'from-slate-400/20 via-slate-600/10 to-[#0e1014]',
+    borderGlow: 'border-slate-300/40 shadow-[0_0_30px_rgba(203,213,225,0.2)]',
+  },
+  {
+    position: '3rd',
+    rank: 3,
+    badge: '2nd Runner Up // 3rd Place',
+    teamName: 'Team nakshatra',
+    members: [
+      { name: 'Nitin Kumar', college: 'MMMUT' },
+      { name: 'Swati Kushwaha', college: 'MMMUT' },
+    ],
+    highlight: 'Impressive domain execution, robust problem-solving strategy, and creative architectural design.',
+    trophyColor: 'text-amber-600',
+    gradient: 'from-amber-700/20 via-orange-900/10 to-[#130d0a]',
+    borderGlow: 'border-amber-600/40 shadow-[0_0_30px_rgba(217,119,6,0.2)]',
+  },
+];
+
+export const FINAL_SPECIAL_APPRECIATIONS: FinalSpecialAppreciation[] = [
+  {
+    position: '4th',
+    rank: 4,
+    teamName: 'P²',
+    members: [
+      { name: 'Priyanshu Mishra', college: 'MMMUT' },
+      { name: 'Priyanshu Rai', college: 'MMMUT' },
+    ],
+    badge: 'Special Appreciation',
+  },
+  {
+    position: '5th',
+    rank: 5,
+    teamName: 'Supic',
+    members: [
+      { name: 'Epshita Somani', college: 'MMMUT' },
+      { name: 'Shaurya Bhatt', college: 'MMMUT' },
+    ],
+    badge: 'Special Appreciation',
+  },
+];
+
+export const FINAL_RESULT_META = {
+  eventName: 'HACKTOBERFEST X BYTEBRAWL',
+  announcementTitle: 'FINAL ROUND RESULT',
+  announcementText:
+    'We are delighted to announce the winners of HACKTOBERFEST X BYTEBRAWL, a celebration of coding, innovation, problem-solving, and technical excellence. The final round witnessed enthusiastic participation, creative thinking, and outstanding efforts from all the teams. Congratulations to all the winners and participants! Your enthusiasm and commitment made HACKTOBERFEST X BYTEBRAWL a memorable and successful event.',
+  coordinators: [
+    { name: 'Aditya Gupta', role: 'CSE, 2nd Year', phone: '80575 18976' },
+    { name: 'Khushi Patel', role: 'IT, 2nd Year', phone: '63888 92891' },
+  ],
+  institution: 'Madan Mohan Malaviya University of Technology, Gorakhpur, Uttar Pradesh',
+  // Official Instagram link for ByteBrawl announcement (update with specific post link when provided)
+  instagramUrl: 'https://www.instagram.com/flux.mmmut?igsh=aHI5c3Z1dGZwOGI2',
+};
 
 export interface LeaderboardTeam {
   teamId: string;
