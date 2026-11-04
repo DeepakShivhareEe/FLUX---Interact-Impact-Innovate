@@ -43,6 +43,7 @@ import judgeAuthRoutes from "./routes/judgeAuth.js";
 import sheLeadsRoutes from "./routes/sheLeadsRoutes.js";
 import bytebrawlRoutes from "./routes/bytebrawlRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import chatRoutes from "./routes/chat.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -168,6 +169,9 @@ app.use("/api/she-leads", sheLeadsRoutes);
 app.use("/api/events/bytebrawl-hacktoberfest", bytebrawlRoutes);
 
 app.use("/api/admin", adminRoutes);
+
+// FLUX AI chatbot — Groq-powered, retrieval-grounded over chatbot-content/
+app.use("/api/chat", chatRoutes);
 
 // ==================== HEALTH CHECK ====================
 

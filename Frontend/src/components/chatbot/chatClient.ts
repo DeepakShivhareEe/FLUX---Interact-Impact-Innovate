@@ -9,10 +9,24 @@ export class ChatClient {
   private apiUrl: string | undefined;
 
   constructor(options?: ChatClientOptions) {
+    // Default: the deployed FLUX backend (Groq-powered retrieval-grounded bot).
+    // Override with VITE_CHAT_API_URL / VITE_CHATBOT_API_URL, or pass an
+    // explicit apiUrl. If the API is unreachable or errors out, send() falls
+    // back to the local offline knowledge engine below.
+    // Environment-aware default so the LLM (Groq) backend is always the one
+    // that answers when it is actually reachable:
+    //   • dev (vite serve): local backend — http://localhost:4000/api/chat
+    //   • prod build:       the deployed FLUX backend on Render
+    // Explicit VITE_CHAT_API_URL / VITE_CHATBOT_API_URL still win.
+    // If the API is unreachable or errors out, send() falls back to the local
+    // offline knowledge engine below.
     this.apiUrl =
       options?.apiUrl ||
       (import.meta.env.VITE_CHAT_API_URL as string | undefined) ||
-      (import.meta.env.VITE_CHATBOT_API_URL as string | undefined);
+      (import.meta.env.VITE_CHATBOT_API_URL as string | undefined) ||
+      (import.meta.env.DEV
+        ? 'http://localhost:4000/api/chat'
+        : 'https://flux-backend-1hmq.onrender.com/api/chat');
   }
 
   /**
@@ -61,7 +75,7 @@ export class ChatClient {
               {
                 role: 'system',
                 content:
-                  'You are FLUX AI, the official assistant for FLUX (Future Leaders of Unbound Xperiments), the research and innovation society at MMMUT Gorakhpur. You must ONLY answer queries directly related to FLUX society, its events (Ideathon, ByteBrawl, Hacktoberfest, ATAL FDP, bootcamps), student wings (AI/ML, Dev, CP, Design, Media, Operations), recruitment/inductions, faculty mentors (Prof. Anupama Kaushik Sharma, CSED), and initiatives (She Leads). If the user asks about ANY topic unrelated to FLUX, you must strictly refuse to answer and state that you are specifically designed to assist with FLUX-related inquiries at MMMUT Gorakhpur.',
+                  'You are FLUX AI, the official assistant for FLUX (Future Leaders of Unbound Xperiments), the research and innovation society at MMMUT Gorakhpur. You must ONLY answer queries directly related to FLUX society, its events and results (Ideathon 2025 including winners ZenTechs/TRINETRA/SpiralForge, ByteBrawl x Hacktoberfest 2026 including winners 2 Pointer Approach/Quarks/Team nakshatra, Hacktoberfest, ATAL FDP on Mechanistic Interpretability, She Leads speakers Nitya Anand/Ipshita Gupta/Arpita Varshneya/Anjali Sharma, expert talks, bootcamps), the 50-problem Ideathon problem bank, student leadership (President Shivam Mishra, Vice President Yashasvi Sharma, and the full team), student wings (AI/ML, Dev, CP, Design, Media, Operations), recruitment/inductions, faculty mentors (Prof. Anupama Kaushik Sharma, Prof. Rakesh Kumar, Dr. Satvik Vats, Dr. Shwet Ketu), website navigation, and contact channels (flux@mmmut.ac.in). If the user asks about ANY topic unrelated to FLUX, you must strictly refuse to answer and state that you are specifically designed to assist with FLUX-related inquiries at MMMUT Gorakhpur.',
               },
               ...messages.map((m) => ({
                 role: m.role,
