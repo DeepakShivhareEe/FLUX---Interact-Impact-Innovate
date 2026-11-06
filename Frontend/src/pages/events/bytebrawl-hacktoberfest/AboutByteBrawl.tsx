@@ -32,12 +32,6 @@ export default function AboutByteBrawl() {
       <Container>
         {/* Section Header */}
         <div className="max-w-3xl mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded border border-white/10 bg-white/[0.03] mb-4">
-            <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-neutral-400">
-              // 01 ABOUT BYTEBRAWL //
-            </span>
-          </div>
-
           <h2 className="font-sans font-black text-3xl sm:text-5xl uppercase tracking-tight text-white leading-tight mb-6">
             Where Code Meets{" "}
             <span className="font-script lowercase font-normal text-4xl sm:text-6xl text-white/90">
@@ -77,4 +71,3 @@ export default function AboutByteBrawl() {
     </section>
   );
 }
-

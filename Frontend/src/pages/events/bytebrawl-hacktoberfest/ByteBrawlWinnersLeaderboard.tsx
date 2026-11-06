@@ -1,969 +1,1053 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trophy,
-  Medal,
   Award,
-  Search,
-  Users,
-  CheckCircle2,
-  FileText,
-  Building2,
-  ChevronRight,
-  Star,
-  Scale,
-  HeartHandshake,
-  Sprout,
-  Sun,
-  Languages,
-  ArrowRight,
+  Sparkles,
+  ShieldCheck,
   Eye,
   X,
-  Copy,
-  Check,
-  AlertCircle,
+  Volume2,
+  VolumeX,
+  Lock,
+  Unlock,
+  CheckCircle2,
+  Phone,
+  Instagram,
   Cpu,
-  Lightbulb,
-  Quote,
 } from "lucide-react";
 import Container from "@/components/layout/Container";
-import {
-  ROUND1_LEADERBOARD,
-  SPECIAL_APPRECIATION_TEAMS,
-  ROUND2_ALLOTMENTS,
-  PROBLEM_STATEMENTS,
-  PROBLEM_STATEMENTS_DETAILS,
-  TRACKS_METADATA,
-} from "@/data/bytebrawlResultsData";
-import type {
-  LeaderboardTeam,
-  Round2Allotment,
-  ProblemStatementItem,
-  ProblemStatementDetail,
-} from "@/data/bytebrawlResultsData";
+import { FINAL_RESULT_META } from "@/data/bytebrawlResultsData";
+import resultCircularImg from "@/assets/images/bytebrawl/bytebrawl_result_circular.png";
+import championThumb from "@/assets/bytebrawl_winners/rank_1_champion.webp";
+import runnerUpThumb from "@/assets/bytebrawl_winners/rank_2_runner_up.webp";
+import secondRunnerUpThumb from "@/assets/bytebrawl_winners/rank_3_second_runner_up.webp";
+import "./ByteBrawlWinnersLeaderboard.css";
 
-// Icon mapping for the 5 Bharat tracks
-const TRACK_ICONS: Record<string, React.ReactNode> = {
-  "Satya & Pramaan Bharat": <Scale className="w-4 h-4" />,
-  "Sahayak & Samman Bharat": <HeartHandshake className="w-4 h-4" />,
-  "Bhoomi & Bharosa Bharat": <Sprout className="w-4 h-4" />,
-  "Shital & Sajag Bharat": <Sun className="w-4 h-4" />,
-  "Bhasha & Bol Bharat": <Languages className="w-4 h-4" />,
+// ─── Authentic College Registrations Metrics (Eastern UP Region) ────────────
+const COLLEGE_REGISTRATIONS = {
+  stats: [
+    { label: "REG. TEAMS", value: "179" },
+    { label: "HACKERS", value: "300+" },
+    { label: "COLLEGES", value: "5" },
+  ],
+  colleges: [
+    { rank: "01", name: "MMMUT", fullName: "Madan Mohan Malaviya University of Tech", isHighlighted: true },
+    { rank: "02", name: "ITM", fullName: "Institute of Technology & Management", isHighlighted: false },
+    { rank: "03", name: "DDU", fullName: "Deen Dayal Upadhyaya Gorakhpur Univ", isHighlighted: true },
+    { rank: "04", name: "MPIT", fullName: "Maharana Pratap Institute of Tech", isHighlighted: false },
+    { rank: "05", name: "REC Basti", fullName: "Rajkiya Engineering College Basti", isHighlighted: false },
+  ],
 };
 
-type ActiveTab = "allotments" | "leaderboard" | "problemStatements";
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+  alpha: number;
+  decay: number;
+}
 
 export default function ByteBrawlWinnersLeaderboard() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("allotments");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTrack, setSelectedTrack] = useState<string>("ALL");
-  const [selectedCollege, setSelectedCollege] = useState<string>("ALL");
+  const [revealed, setRevealed] = useState<{ [key: number]: boolean }>({
+    1: false,
+    2: false,
+    3: false,
+  });
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [isCircularModalOpen, setIsCircularModalOpen] = useState(false);
 
-  // State for problem statement detail modal
-  const [selectedModalPS, setSelectedModalPS] = useState<{
-    psNo: string;
-    team?: Round2Allotment | null;
-  } | null>(null);
-  const [copied, setCopied] = useState(false);
+  // Audio Context Ref
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
-  const openModal = (psNo: string, team?: Round2Allotment | null) => {
-    const matchedTeam = team || ROUND2_ALLOTMENTS.find((a) => a.psNo === psNo) || null;
-    setSelectedModalPS({ psNo, team: matchedTeam });
-  };
+  // Canvas Ref for celebration particles
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const animFrameRef = useRef<number | null>(null);
 
-  const closeModal = () => setSelectedModalPS(null);
-
-  // Keyboard navigation, Lenis scroll pause & body scroll lock
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeModal();
-    };
-
-    const lenis = typeof window !== "undefined" ? (window as any).__lenis : null;
-
-    if (selectedModalPS) {
-      document.body.style.overflow = "hidden";
-      window.addEventListener("keydown", handleKeyDown);
-      if (lenis && typeof lenis.stop === "function") {
-        lenis.stop();
-      }
-    } else {
-      document.body.style.overflow = "unset";
-      if (lenis && typeof lenis.start === "function") {
-        lenis.start();
+  // Helper: Web Audio Tone Synthesizer
+  const getAudioCtx = () => {
+    if (!audioCtxRef.current) {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      if (AudioCtx) {
+        audioCtxRef.current = new AudioCtx();
       }
     }
-    return () => {
-      document.body.style.overflow = "unset";
-      window.removeEventListener("keydown", handleKeyDown);
-      if (lenis && typeof lenis.start === "function") {
-        lenis.start();
-      }
-    };
-  }, [selectedModalPS]);
-
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
   };
 
-  const activePSDetail: ProblemStatementDetail | undefined = selectedModalPS
-    ? PROBLEM_STATEMENTS_DETAILS[selectedModalPS.psNo]
-    : undefined;
+  const playSynthTone = (
+    freq: number,
+    type: OscillatorType = "sine",
+    duration = 0.25
+  ) => {
+    if (!audioEnabled) return;
+    try {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch {
+      // Audio context may be restricted by browser policy
+    }
+  };
 
-  // Unique Colleges
-  const colleges = useMemo(() => {
-    const list = Array.from(new Set(ROUND1_LEADERBOARD.map((t) => t.college)));
-    return ["ALL", ...list];
+  const playFanfareTone = () => {
+    if (!audioEnabled) return;
+    playSynthTone(330, "triangle", 0.2);
+    setTimeout(() => playSynthTone(440, "triangle", 0.25), 110);
+    setTimeout(() => playSynthTone(554.37, "sawtooth", 0.3), 230);
+    setTimeout(() => playSynthTone(659.25, "sine", 0.65), 370);
+  };
+
+  // Canvas particle burst
+  const triggerCelebrationParticles = (
+    colorHex = "#ffd700",
+    particleCount = 65
+  ) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const originX = canvas.width / 2;
+    const originY = canvas.height * 0.4;
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 8 + 3;
+      particlesRef.current.push({
+        x: originX,
+        y: originY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2.5,
+        color: Math.random() > 0.4 ? colorHex : "#00f0ff",
+        size: Math.random() * 4 + 2,
+        alpha: 1,
+        decay: Math.random() * 0.02 + 0.015,
+      });
+    }
+  };
+
+  // Setup canvas animation loop & resize
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    const render = () => {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const particles = particlesRef.current;
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.16; // gravity
+          p.alpha -= p.decay;
+
+          if (p.alpha <= 0) {
+            particles.splice(i, 1);
+            continue;
+          }
+
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      animFrameRef.current = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+        audioCtxRef.current.close().catch(() => { });
+      }
+    };
   }, []);
 
-  // Filtered Allotments
-  const filteredAllotments = useMemo(() => {
-    return ROUND2_ALLOTMENTS
-      .filter((item) => {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesSearch =
-          !q ||
-          item.teamName.toLowerCase().includes(q) ||
-          item.teamId.toLowerCase().includes(q) ||
-          item.leader.toLowerCase().includes(q) ||
-          (item.member && item.member.toLowerCase().includes(q)) ||
-          item.psNo.toLowerCase().includes(q) ||
-          item.problemStatement.toLowerCase().includes(q) ||
-          item.track.toLowerCase().includes(q) ||
-          item.college.toLowerCase().includes(q);
+  // Individual card unveil
+  const handleReveal = (rank: number) => {
+    if (revealed[rank]) return;
 
-        const matchesTrack = selectedTrack === "ALL" || item.track === selectedTrack;
-        const matchesCollege = selectedCollege === "ALL" || item.college === selectedCollege;
+    setRevealed((prev) => ({ ...prev, [rank]: true }));
 
-        return matchesSearch && matchesTrack && matchesCollege;
-      })
-      .sort((a, b) => a.teamName.localeCompare(b.teamName, undefined, { numeric: true, sensitivity: "base" }));
-  }, [searchQuery, selectedTrack, selectedCollege]);
+    if (rank === 1) {
+      playFanfareTone();
+      triggerCelebrationParticles("#ffd700", 110);
+    } else if (rank === 2) {
+      playSynthTone(480, "triangle", 0.35);
+      triggerCelebrationParticles("#e2e8f0", 50);
+    } else if (rank === 3) {
+      playSynthTone(380, "sine", 0.35);
+      triggerCelebrationParticles("#cd7f32", 45);
+    }
+  };
 
-  // Filtered Round 1 Teams (Alphabetical Order)
-  const filteredLeaderboard = useMemo(() => {
-    return ROUND1_LEADERBOARD
-      .filter((item) => {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesSearch =
-          !q ||
-          item.teamName.toLowerCase().includes(q) ||
-          item.teamId.toLowerCase().includes(q) ||
-          item.leader.toLowerCase().includes(q) ||
-          (item.member && item.member.toLowerCase().includes(q)) ||
-          item.college.toLowerCase().includes(q);
+  // Unveil all sequentially (Ceremony Overdrive)
+  const handleRevealAll = () => {
+    handleReveal(3);
+    setTimeout(() => handleReveal(2), 240);
+    setTimeout(() => handleReveal(1), 540);
+  };
 
-        const matchesCollege = selectedCollege === "ALL" || item.college === selectedCollege;
-
-        return matchesSearch && matchesCollege;
-      })
-      .sort((a, b) => a.teamName.localeCompare(b.teamName, undefined, { numeric: true, sensitivity: "base" }));
-  }, [searchQuery, selectedCollege]);
-
-  // Filtered Problem Statements
-  const filteredProblemStatements = useMemo(() => {
-    return PROBLEM_STATEMENTS.filter((item) => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        item.psNo.toLowerCase().includes(q) ||
-        item.title.toLowerCase().includes(q) ||
-        item.track.toLowerCase().includes(q) ||
-        item.allottedTo.toLowerCase().includes(q);
-
-      const matchesTrack = selectedTrack === "ALL" || item.track === selectedTrack;
-
-      return matchesSearch && matchesTrack;
-    });
-  }, [searchQuery, selectedTrack]);
+  const revealedCount =
+    (revealed[1] ? 1 : 0) + (revealed[2] ? 1 : 0) + (revealed[3] ? 1 : 0);
 
   return (
     <section
       id="results-and-allotments"
-      className="relative py-24 sm:py-32 bg-[#080808] text-white overflow-hidden"
+      className="relative py-16 sm:py-24 bg-[#08080f] text-[#e4e1ed] bb-cyber-grid-bg bb-radial-vignette overflow-hidden selection:bg-[#00f0ff] selection:text-[#00363a]"
     >
-      {/* Background ambient lighting */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/3 w-[36rem] h-[36rem] bg-amber-500/[0.04] rounded-full blur-[140px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-[32rem] h-[32rem] bg-cyan-500/[0.03] rounded-full blur-[128px]" />
-        <div className="absolute inset-0 bg-grid opacity-15 pointer-events-none" />
-      </div>
+      {/* Celebration Particle Canvas */}
+      <canvas
+        ref={canvasRef}
+        className="fixed inset-0 pointer-events-none z-50 w-full h-full"
+      />
 
-      <Container className="relative z-10 w-full">
-        {/* Section Header */}
-        <div className="text-center max-w-4xl mx-auto mb-16 sm:mb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 backdrop-blur-md mb-4"
-          >
-            <Users className="w-3.5 h-3.5 text-amber-400" />
-            <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-amber-300 font-semibold">
-              // QUALIFIED TEAMS & ROUND 2 ALLOTMENTS //
+      <Container>
+        {/* ── TOP LIVE BANNER & INTRO ────────────────────────────────────── */}
+        <div className="relative z-10 max-w-6xl mx-auto mb-10 text-center">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#121124] border border-[#231f42] text-xs font-mono mb-4 shadow-[0_0_20px_rgba(0,240,255,0.15)]">
+            <span className="w-2 h-2 rounded-full bg-[#10b981] animate-ping" />
+            <span className="text-[#00f0ff] font-bold uppercase tracking-wider">
+              BYTEBRAWL FLUX · GRAND CHAMPIONSHIP STAGE
             </span>
-          </motion.div>
+          </div>
 
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="font-sans font-black text-3xl sm:text-5xl lg:text-6xl uppercase tracking-tight text-white leading-[1.08] mb-5"
-          >
-            Qualified Teams of the{" "}
-            <span className="font-script lowercase font-normal text-4xl sm:text-6xl lg:text-7xl bg-gradient-to-r from-amber-300 via-amber-200 to-amber-400 bg-clip-text text-transparent">
-              arena
+          <h2 className="font-heading font-black text-3xl sm:text-5xl lg:text-6xl text-white tracking-tight uppercase leading-tight mb-4">
+            Holographic Reveal{" "}
+            <span className="bg-gradient-to-r from-[#ffaa00] via-[#ffd700] to-[#00f0ff] bg-clip-text text-transparent">
+              Arena
             </span>{" "}
-            & Problem Allotments
-          </motion.h2>
+            &amp; Official Podium
+          </h2>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="font-sans text-sm sm:text-base text-neutral-300 font-light max-w-2xl mx-auto leading-relaxed"
-          >
-            Congratulations to all qualifying teams advancing to Round 2! Teams are listed alphabetically below without scores or ranks. Inspect the qualified teams, problem allotments, and explore assigned challenges across all 5 national <strong className="text-white font-medium">Bharat Innovation Tracks</strong>.
-          </motion.p>
-        </div>
+          <p className="font-sans text-sm sm:text-base text-[#b9cacb] max-w-2xl mx-auto leading-relaxed">
+            179 Teams, 300+ Hackers, and 5 Universities converged for an electrifying
+            coding tournament. Decrypt the double-blind cryptographic vault to unveil the official champions.
+          </p>
 
-        {/* ── METRICS STRIP ────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 max-w-5xl mx-auto mb-16">
-          <div className="p-4 rounded-xl border border-white/10 bg-[#121212]/80 backdrop-blur-sm text-center">
-            <span className="font-mono text-2xl sm:text-3xl font-black text-amber-400 block">
-              26
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">
-              Qualified Teams
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl border border-white/10 bg-[#121212]/80 backdrop-blur-sm text-center">
-            <span className="font-mono text-2xl sm:text-3xl font-black text-emerald-400 block">
-              25
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">
-              R2 Finalist Teams
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl border border-white/10 bg-[#121212]/80 backdrop-blur-sm text-center">
-            <span className="font-mono text-2xl sm:text-3xl font-black text-cyan-400 block">
-              25
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">
-              Allotted Problem Statements
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl border border-white/10 bg-[#121212]/80 backdrop-blur-sm text-center">
-            <span className="font-mono text-2xl sm:text-3xl font-black text-purple-400 block">
-              5
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">
-              Bharat Tracks
-            </span>
-          </div>
-
-          <div className="col-span-2 sm:col-span-4 lg:col-span-1 p-4 rounded-xl border border-white/10 bg-[#121212]/80 backdrop-blur-sm text-center">
-            <span className="font-mono text-2xl sm:text-3xl font-black text-white block">
-              4
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400">
-              Colleges (MMMUT/MPIT/ITM/DDU)
-            </span>
-          </div>
-        </div>
-
-        {/* ── TAB SELECTOR & COMMAND BAR ───────────────────────────── */}
-        <div className="max-w-6xl mx-auto mb-8">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-2 rounded-2xl border border-white/10 bg-[#101014]/90 backdrop-blur-md">
-            {/* Tab Buttons */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {/* ── CEREMONIAL CONTROL DECK ──────────────────────────────────── */}
+          <div className="mt-8 p-4 rounded-2xl bg-[#121124]/90 border border-[#231f42] backdrop-blur-xl shadow-2xl flex flex-wrap items-center justify-between gap-4">
+            {/* Audio Toggle & Equalizer */}
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => setActiveTab("allotments")}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider transition-all duration-200 ${activeTab === "allotments"
-                  ? "bg-white text-black font-bold shadow-md"
-                  : "text-neutral-400 hover:text-white hover:bg-white/[0.05]"
-                  }`}
+                onClick={() => {
+                  setAudioEnabled(!audioEnabled);
+                  playSynthTone(audioEnabled ? 300 : 520, "sine", 0.15);
+                }}
+                className="w-10 h-10 rounded-xl bg-[#1a1926] hover:bg-[#232238] flex items-center justify-center border border-[#ffaa00]/40 text-[#ffaa00] transition-colors cursor-pointer"
+                title={audioEnabled ? "Mute SFX" : "Enable SFX"}
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Round 2 PS Allotments</span>
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-800 text-neutral-200">
-                  {ROUND2_ALLOTMENTS.length}
-                </span>
+                {audioEnabled ? (
+                  <Volume2 className="w-5 h-5 text-[#ffaa00]" />
+                ) : (
+                  <VolumeX className="w-5 h-5 text-[#849495]" />
+                )}
               </button>
 
-              <button
-                onClick={() => setActiveTab("leaderboard")}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider transition-all duration-200 ${activeTab === "leaderboard"
-                  ? "bg-white text-black font-bold shadow-md"
-                  : "text-neutral-400 hover:text-white hover:bg-white/[0.05]"
-                  }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Qualified Teams</span>
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-800 text-neutral-200">
-                  {ROUND1_LEADERBOARD.length}
-                </span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab("problemStatements")}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider transition-all duration-200 ${activeTab === "problemStatements"
-                  ? "bg-white text-black font-bold shadow-md"
-                  : "text-neutral-400 hover:text-white hover:bg-white/[0.05]"
-                  }`}
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span>25 Problem Statements</span>
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-800 text-neutral-200">
-                  5 Tracks
-                </span>
-              </button>
-            </div>
-
-            {/* Instant Search Bar */}
-            <div className="relative w-full md:w-72">
-              <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search team, PS, person..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs font-mono rounded-xl bg-black/60 border border-white/10 text-white placeholder-neutral-500 focus:outline-none focus:border-white/30 transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white text-xs font-mono"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Sub-Filters: Track & College (rendered when appropriate) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mt-4 px-2">
-            {activeTab !== "leaderboard" && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mr-1">
-                  Track:
-                </span>
-                <button
-                  onClick={() => setSelectedTrack("ALL")}
-                  className={`px-3 py-1 rounded-lg font-mono text-[11px] uppercase tracking-wider border transition-colors ${selectedTrack === "ALL"
-                    ? "bg-white text-black font-bold border-white"
-                    : "border-white/10 text-neutral-400 hover:text-white hover:bg-white/[0.04]"
-                    }`}
-                >
-                  All (25)
-                </button>
-                {Object.keys(TRACKS_METADATA).map((trackName) => {
-                  const meta = TRACKS_METADATA[trackName];
-                  const isActive = selectedTrack === trackName;
-                  return (
-                    <button
-                      key={meta.id}
-                      onClick={() => setSelectedTrack(trackName)}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-mono text-[11px] uppercase tracking-wider border transition-all ${isActive
-                        ? `${meta.badgeColor} font-bold shadow-sm`
-                        : "border-white/10 text-neutral-400 hover:text-white hover:bg-white/[0.04]"
-                        }`}
-                    >
-                      {TRACK_ICONS[trackName]}
-                      <span>{meta.name.split(" ")[0]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* College filter */}
-            {activeTab !== "problemStatements" && (
-              <div className="flex flex-wrap items-center gap-1.5 ml-auto">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-400 mr-1">
-                  College:
-                </span>
-                {colleges.map((col) => (
-                  <button
-                    key={col}
-                    onClick={() => setSelectedCollege(col)}
-                    className={`px-2.5 py-1 rounded-lg font-mono text-[10px] uppercase tracking-wider border transition-colors ${selectedCollege === col
-                      ? "bg-white text-black font-bold border-white"
-                      : "border-white/10 text-neutral-400 hover:text-white hover:bg-white/[0.04]"
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-white tracking-wider">
+                    {audioEnabled ? "SFX: ACTIVE" : "SFX: MUTED"}
+                  </span>
+                  <div
+                    className={`flex items-center gap-0.5 h-4 ${audioEnabled ? "" : "opacity-30"
                       }`}
                   >
-                    {col}
-                  </button>
-                ))}
+                    <span className="bb-eq-bar w-1 bg-[#ffaa00] rounded-full inline-block" />
+                    <span className="bb-eq-bar w-1 bg-[#00f0ff] rounded-full inline-block" />
+                    <span className="bb-eq-bar w-1 bg-[#10b981] rounded-full inline-block" />
+                    <span className="bb-eq-bar w-1 bg-[#ffd700] rounded-full inline-block" />
+                  </div>
+                </div>
+                <span className="font-mono text-[10px] text-[#849495] block">
+                  SYNTHESIZED STAGE SFX
+                </span>
               </div>
-            )}
+            </div>
+
+            {/* Decryption Counter Status */}
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-[#849495] uppercase tracking-wider hidden md:inline">
+                STATUS:
+              </span>
+              <span
+                className={`font-mono text-xs px-3 py-1 rounded-lg border font-bold transition-all ${revealedCount === 3
+                    ? "bg-[#10b981]/20 text-[#10b981] border-[#10b981]/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                    : "bg-[#1a1926] text-[#ffaa00] border-[#231f42]"
+                  }`}
+              >
+                {revealedCount === 3
+                  ? "✓ 3 / 3 DECRYPTED · ALL TIERS UNVEILED"
+                  : `${revealedCount} / 3 DECRYPTED`}
+              </span>
+            </div>
+
+            {/* Unveil Action Triggers */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => handleReveal(3)}
+                className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 ${revealed[3]
+                    ? "bg-[#1a1926] text-[#cd7f32] border border-[#cd7f32]/40"
+                    : "bg-[#1a1926] hover:bg-[#232238] text-white border border-[#231f42] hover:border-[#cd7f32]/50"
+                  }`}
+              >
+                {revealed[3] ? (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                ) : (
+                  <Unlock className="w-3.5 h-3.5 text-[#cd7f32]" />
+                )}
+                <span>{revealed[3] ? "3RD UNVEILED" : "UNVEIL 3RD"}</span>
+              </button>
+
+              <button
+                onClick={() => handleReveal(2)}
+                className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 ${revealed[2]
+                    ? "bg-[#1a1926] text-[#e2e8f0] border border-[#e2e8f0]/40"
+                    : "bg-[#1a1926] hover:bg-[#232238] text-white border border-[#231f42] hover:border-[#00f0ff]/50"
+                  }`}
+              >
+                {revealed[2] ? (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                ) : (
+                  <Unlock className="w-3.5 h-3.5 text-[#00f0ff]" />
+                )}
+                <span>{revealed[2] ? "RUNNER UP UNVEILED" : "UNVEIL RUNNER UP"}</span>
+              </button>
+
+              <button
+                onClick={() => handleReveal(1)}
+                className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase transition-all cursor-pointer flex items-center gap-1.5 ${revealed[1]
+                    ? "bg-[#ffaa00]/20 text-[#ffd700] border border-[#ffaa00]/60 shadow-[0_0_15px_rgba(255,170,0,0.3)]"
+                    : "bg-gradient-to-r from-[#ffaa00] to-[#ffd700] text-black font-extrabold hover:brightness-110 shadow-[0_0_15px_rgba(255,170,0,0.3)]"
+                  }`}
+              >
+                {revealed[1] ? (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                ) : (
+                  <Trophy className="w-3.5 h-3.5" />
+                )}
+                <span>{revealed[1] ? "CHAMPION UNVEILED" : "UNVEIL CHAMPION"}</span>
+              </button>
+
+              <button
+                onClick={handleRevealAll}
+                className="px-3.5 py-1.5 rounded-xl bg-[#00f0ff] hover:bg-[#7df4ff] text-[#00363a] font-mono text-xs font-black uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(0,240,255,0.4)] flex items-center gap-1.5 cursor-pointer ml-auto sm:ml-0"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>CEREMONY OVERDRIVE</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* ── TAB CONTENT ─────────────────────────────────────────── */}
-        <AnimatePresence mode="wait">
-          {/* TAB 1: ROUND 2 PS ALLOTMENTS */}
-          {activeTab === "allotments" && (
-            <motion.div
-              key="allotments"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-6xl mx-auto"
-            >
-              {filteredAllotments.length === 0 ? (
-                <div className="p-12 text-center rounded-2xl border border-white/10 bg-[#121212]/50">
-                  <p className="font-mono text-sm text-neutral-400">
-                    No allotments found matching your criteria.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                  {filteredAllotments.map((allot) => {
-                    const trackMeta = TRACKS_METADATA[allot.track];
-                    const isMerged = allot.teamType.includes("INDIVIDUAL");
+        {/* ── 3-TIER HOLOGRAPHIC PODIUM STAGE (MAIN ATTRACTION) ─────────── */}
+        <div className="relative z-10 max-w-6xl mx-auto mt-16 sm:mt-24 mb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch lg:items-end">
 
-                    return (
+            {/* ── 2ND PLACE PODIUM (Left Slot - Cols 1-4) ──────────────── */}
+            <div
+              className={`lg:col-span-4 rounded-2xl bg-[#121124] border border-[#231f42] p-5 sm:p-6 shadow-2xl transition-all duration-500 order-2 lg:order-1 flex flex-col justify-between overflow-hidden relative group ${revealed[2]
+                  ? "holo-border-cyan shadow-[0_0_35px_rgba(0,240,255,0.25)]"
+                  : ""
+                }`}
+            >
+              {/* Laser scanline */}
+              <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#00f0ff] to-transparent opacity-30 animate-scanline pointer-events-none" />
+
+              {/* ENCRYPTED MYSTERY OVERLAY */}
+              <AnimatePresence>
+                {!revealed[2] && (
+                  <motion.div
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="!absolute inset-0 z-20 bg-[#121124]/98 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
+                  >
+                    <div className="relative w-16 h-16 mb-4 flex items-center justify-center">
                       <div
-                        key={allot.sno + allot.teamName}
-                        className={`relative rounded-2xl border p-5 sm:p-6 backdrop-blur-md transition-all duration-300 hover:scale-[1.01] flex flex-col justify-between ${isMerged
-                          ? "border-amber-400/40 bg-gradient-to-br from-amber-500/10 via-[#151310] to-[#0d0d0f]"
-                          : "border-white/10 bg-[#121215]/90 hover:border-white/20"
-                          }`}
-                      >
-                        <div>
-                          {/* Top Bar: S.No, Team ID & College */}
-                          <div className="flex items-center justify-between gap-3 mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs px-2.5 py-0.5 rounded bg-white/10 text-white font-bold">
-                                #{allot.sno}
-                              </span>
-                              <span className="font-mono text-xs text-neutral-400">
-                                {allot.teamId}
-                              </span>
-                              {isMerged && (
-                                <span className="font-mono text-[9px] uppercase px-2 py-0.5 rounded bg-amber-400 text-black font-bold">
-                                  MERGED PAIR
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-[10px] uppercase px-2.5 py-0.5 rounded border border-white/10 bg-white/[0.04] text-neutral-300">
-                                {allot.college}
-                              </span>
-                            </div>
-                          </div>
+                        className="absolute inset-0 rounded-2xl border-2 border-dashed border-[#e2e8f0]/40 animate-spin"
+                        style={{ animationDuration: "12s" }}
+                      />
+                      <span className="font-heading text-3xl font-black text-[#e2e8f0]">
+                        2
+                      </span>
+                    </div>
 
-                          {/* Team Name */}
-                          <h4 className="font-sans font-bold text-lg sm:text-xl text-white mb-2 tracking-tight">
-                            {allot.teamName}
-                          </h4>
-
-                          {/* Members */}
-                          <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-neutral-300 mb-4 pb-4 border-b border-white/10">
-                            <span className="flex items-center gap-1.5">
-                              <Users className="w-3.5 h-3.5 text-neutral-400" />
-                              <strong>{allot.leader}</strong>
-                              <span className="text-[10px] text-neutral-400 font-mono">
-                                ({isMerged ? "Ayush" : "Leader"})
-                              </span>
-                            </span>
-                            {allot.member && (
-                              <span className="flex items-center gap-1.5">
-                                <span className="text-neutral-500">•</span>
-                                <span>{allot.member}</span>
-                                <span className="text-[10px] text-neutral-400 font-mono">
-                                  ({isMerged ? "Chetna" : "Member"})
-                                </span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Allotted Problem Statement Card */}
-                        <div
-                          className={`p-3.5 sm:p-4 rounded-xl border ${trackMeta ? trackMeta.borderColor : "border-white/10"
-                            } bg-black/40 mt-auto`}
-                        >
-                          <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <span className="font-mono text-xs font-black text-amber-400 tracking-wider">
-                              {allot.psNo}
-                            </span>
-                            <span
-                              className={`font-mono text-[10px] uppercase px-2 py-0.5 rounded-full border flex items-center gap-1 ${trackMeta ? trackMeta.badgeColor : "text-white"
-                                }`}
-                            >
-                              {TRACK_ICONS[allot.track]}
-                              <span>{allot.track}</span>
-                            </span>
-                          </div>
-
-                          <p className="font-sans text-sm text-neutral-100 font-medium leading-relaxed mb-3">
-                            {allot.problemStatement}
-                          </p>
-
-                          {/* Action Button: View Description */}
-                          <button
-                            onClick={() => openModal(allot.psNo, allot)}
-                            className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] border border-white/10 hover:border-amber-400/40 text-neutral-200 hover:text-white font-mono text-xs uppercase tracking-wider transition-all duration-200 group/btn"
-                          >
-                            <span className="flex items-center gap-2">
-                              <FileText className="w-3.5 h-3.5 text-amber-400 group-hover/btn:scale-110 transition-transform" />
-                              <span>View Problem Description</span>
-                            </span>
-                            <ChevronRight className="w-4 h-4 text-neutral-500 group-hover/btn:translate-x-1 group-hover/btn:text-white transition-all" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* TAB 2: QUALIFIED TEAMS */}
-          {activeTab === "leaderboard" && (
-            <motion.div
-              key="leaderboard"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-6xl mx-auto space-y-12"
-            >
-              {/* Teams Table / Grid */}
-              <div className="rounded-2xl border border-white/10 bg-[#121215]/90 backdrop-blur-md overflow-hidden">
-                <div className="p-4 sm:p-5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-amber-400" />
-                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-white">
-                      Round 1 Qualified Teams (Alphabetical Order)
+                    <span className="font-mono text-xs text-[#e2e8f0] tracking-widest uppercase font-bold">
+                      2ND PLACE // 1ST RUNNER UP
                     </span>
+
+                    <div className="font-mono text-[11px] text-[#849495] my-2 bg-[#151520] px-2.5 py-1 rounded border border-[#231f42]">
+                      VAULT_HASH: 0x8F..E24A
+                    </div>
+
+                    <p className="font-sans text-xs text-[#b9cacb] max-w-xs mb-5">
+                      Double-blind technical evaluation sealed. Comprehensive Bharat challenge implementation.
+                    </p>
+
+                    <button
+                      onClick={() => handleReveal(2)}
+                      className="px-4 py-2 rounded-xl bg-[#1a1926] hover:bg-[#232238] text-[#00f0ff] font-mono text-xs font-bold border border-[#00f0ff]/40 shadow-[0_0_15px_rgba(0,240,255,0.2)] transition-all flex items-center gap-1.5 cursor-pointer group-hover:scale-105"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>DECRYPT REVEAL</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* REVEALED CONTENT */}
+              <div className="space-y-4">
+                {/* Header Badge */}
+                <div className="flex items-center justify-between pb-3.5 border-b border-[#231f42]/70">
+                  <div className="flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-xl bg-[#1a1926] flex items-center justify-center font-heading text-xl text-[#e2e8f0] font-black border border-[#e2e8f0]/40 shadow-[0_0_12px_rgba(226,232,240,0.15)]">
+                      2
+                    </span>
+                    <div>
+                      <span className="font-mono text-[11px] text-[#e2e8f0] font-bold uppercase tracking-wider block">
+                        1ST RUNNER UP
+                      </span>
+                      <span className="font-mono text-[10px] text-[#849495]">
+                        BYTEBRAWL 2026
+                      </span>
+                    </div>
                   </div>
-                  <span className="font-mono text-xs text-neutral-400">
-                    Showing {filteredLeaderboard.length} of {ROUND1_LEADERBOARD.length} teams · Arranged Alphabetically (No Ranks Assigned)
+
+                  <span className="font-mono text-xs px-3 py-1 rounded-lg bg-[#1a1926] text-[#00f0ff] font-extrabold border border-[#00f0ff]/30 shadow-[0_0_10px_rgba(0,240,255,0.2)]">
+                    2ND PLACE
                   </span>
                 </div>
 
-                <div className="divide-y divide-white/5">
-                  {filteredLeaderboard.map((team) => {
-                    return (
-                      <div
-                        key={team.teamId + team.teamName}
-                        className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors hover:bg-white/[0.03]"
-                      >
-                        {/* Left: Team Initial & Info */}
-                        <div className="flex items-start sm:items-center gap-4">
-                          {/* Team Initial Avatar */}
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-mono font-black text-sm flex-shrink-0 bg-neutral-800 text-amber-300 border border-white/10 shadow-sm">
-                            {team.teamName.charAt(0).toUpperCase()}
-                          </div>
-
-                          {/* Names & College */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <h4 className="font-sans font-bold text-base sm:text-lg text-white">
-                                {team.teamName}
-                              </h4>
-                              <span className="font-mono text-[10px] text-neutral-400">
-                                ({team.teamId})
-                              </span>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral-300">
-                              <span>
-                                Leader: <strong>{team.leader}</strong>
-                              </span>
-                              {team.member && (
-                                <span>
-                                  • Member: <strong>{team.member}</strong>
-                                </span>
-                              )}
-                              <span className="px-1.5 py-0.2 rounded bg-white/5 font-mono text-[10px] text-neutral-400">
-                                {team.college}
-                              </span>
-                            </div>
-
-                            {(() => {
-                              const allotment = ROUND2_ALLOTMENTS.find(
-                                (a) =>
-                                  a.teamId.includes(team.teamId) ||
-                                  a.teamName.toLowerCase().includes(team.teamName.toLowerCase())
-                              );
-                              if (!allotment) return null;
-                              return (
-                                <div className="mt-2">
-                                  <button
-                                    onClick={() => openModal(allotment.psNo, allotment)}
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 text-amber-300 font-mono text-[11px] transition-all duration-150 group/ps cursor-pointer"
-                                  >
-                                    <FileText className="w-3 h-3 text-amber-400 group-hover/ps:scale-110 transition-transform" />
-                                    <span>
-                                      Round 2: <strong className="text-white">{allotment.psNo}</strong> · View Description
-                                    </span>
-                                    <ChevronRight className="w-3 h-3 text-neutral-400 group-hover/ps:translate-x-0.5 transition-transform" />
-                                  </button>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </div>
-
-                        {/* Right: Round 2 Qualification Status */}
-                        <div className="sm:text-right flex items-center sm:justify-end">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 font-mono text-xs font-semibold">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Round 2 Qualifier</span>
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                {/* Event Photo Preview */}
+                <div className="relative w-full h-44 rounded-xl overflow-hidden bg-[#151520] border border-[#231f42] group-hover:border-[#00f0ff]/40 transition-colors">
+                  <img
+                    src={runnerUpThumb}
+                    alt="ByteBrawl Runner Up Hackathon Presentation"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#121124] via-transparent to-transparent" />
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#08080f]/90 font-mono text-[10px] text-[#00f0ff] border border-[#00f0ff]/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00f0ff] animate-pulse" />
+                    <span>TRACK: SAHAYAK &amp; SAMMAN</span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Special Appreciation Section */}
-              <div className="p-6 sm:p-8 rounded-2xl border border-purple-500/30 bg-gradient-to-b from-purple-500/10 via-[#121019] to-[#0c0a12] backdrop-blur-md">
-                <div className="flex items-center gap-2 mb-4">
-                  <Star className="w-5 h-5 text-purple-400 fill-purple-400" />
-                  <h3 className="font-sans font-black text-xl sm:text-2xl uppercase tracking-tight text-white">
-                    Special Appreciation Honors
+                {/* Team Info */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] text-[#849495] uppercase">
+                      SQUAD
+                    </span>
+                  </div>
+
+                  <h3 className="font-heading text-2xl font-black text-white">
+                    Quarks
                   </h3>
-                </div>
-                <p className="font-sans text-xs sm:text-sm text-neutral-300 mb-6 max-w-2xl leading-relaxed">
-                  Special commendation awarded by the jury and evaluation panel for exemplary technical execution, innovative domain thinking, and algorithmic perseverance during Round 1.
-                </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                  {SPECIAL_APPRECIATION_TEAMS.map((item) => (
-                    <div
-                      key={item.teamId}
-                      className="p-4 rounded-xl border border-purple-400/20 bg-black/40 hover:border-purple-400/40 transition-colors"
-                    >
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-purple-300 font-bold block mb-1">
-                        {item.teamId}
-                      </span>
-                      <h4 className="font-sans font-bold text-base text-white mb-2">
-                        {item.teamName}
-                      </h4>
-                      <div className="text-xs text-neutral-300 space-y-0.5">
-                        <p className="truncate">
-                          <span className="text-neutral-500">1:</span> {item.leader}
-                        </p>
-                        {item.member && (
-                          <p className="truncate">
-                            <span className="text-neutral-500">2:</span> {item.member}
-                          </p>
-                        )}
-                      </div>
+                  <div className="space-y-1.5 font-mono text-xs pt-1">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-[#151520] border border-[#231f42]">
+                      <span className="text-white font-medium">• Utkarsh Shukla</span>
+                      <span className="text-[#00f0ff] font-bold">ITM GKP</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* TAB 3: ALL 25 PROBLEM STATEMENTS */}
-          {activeTab === "problemStatements" && (
-            <motion.div
-              key="problemStatements"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-6xl mx-auto space-y-8"
-            >
-              {Object.keys(TRACKS_METADATA).map((trackName) => {
-                const meta = TRACKS_METADATA[trackName];
-                const trackPS = filteredProblemStatements.filter((p) => p.track === trackName);
-
-                if (trackPS.length === 0) return null;
-
-                return (
-                  <div
-                    key={meta.id}
-                    className={`rounded-2xl border ${meta.borderColor} bg-gradient-to-b ${meta.gradient} p-6 sm:p-8 backdrop-blur-md`}
-                  >
-                    {/* Track Header */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 pb-5 border-b border-white/10">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`p-1.5 rounded-lg ${meta.badgeColor}`}>
-                            {TRACK_ICONS[trackName]}
-                          </span>
-                          <h3 className="font-sans font-black text-xl sm:text-2xl text-white tracking-tight">
-                            {meta.name}
-                          </h3>
-                          <span className="font-mono text-xs text-neutral-400 hidden sm:inline">
-                            · {meta.englishTheme}
-                          </span>
-                        </div>
-                        <p className="font-sans text-xs sm:text-sm text-neutral-300 max-w-3xl leading-relaxed">
-                          {meta.description}
-                        </p>
-                      </div>
-
-                      <div className="flex-shrink-0">
-                        <span className="font-mono text-xs px-3 py-1 rounded-full bg-white/10 text-white font-bold">
-                          {trackPS.length} Problem Statements
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Problem Statements Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {trackPS.map((ps) => (
-                        <div
-                          key={ps.psNo}
-                          className="p-4 rounded-xl border border-white/10 bg-[#0e0e12]/90 hover:border-white/20 transition-all flex flex-col justify-between"
-                        >
-                          <div>
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                              <span className="font-mono text-xs font-black text-amber-400">
-                                {ps.psNo}
-                              </span>
-                              <span className="font-mono text-[9px] uppercase px-2 py-0.5 rounded bg-white/5 text-neutral-400">
-                                Hacktoberfest '26
-                              </span>
-                            </div>
-
-                            <h4 className="font-sans font-bold text-sm sm:text-base text-white leading-snug mb-3">
-                              {ps.title}
-                            </h4>
-                          </div>
-
-                          <div className="pt-3 border-t border-white/10 mt-2">
-                            <span className="font-mono text-[9px] uppercase tracking-wider text-neutral-400 block mb-0.5">
-                              ALLOTTED TO TEAM:
-                            </span>
-                            <span className="font-sans text-xs font-semibold text-emerald-300 block truncate mb-2">
-                              {ps.allottedTo || "Pending allotment"}
-                            </span>
-
-                            <button
-                              onClick={() => openModal(ps.psNo)}
-                              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 text-neutral-300 hover:text-white font-mono text-[11px] uppercase tracking-wider transition-colors"
-                            >
-                              <Eye className="w-3 h-3 text-amber-400" />
-                              <span>View Full Description</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-[#151520] border border-[#231f42]">
+                      <span className="text-white font-medium">• Mansi Singh</span>
+                      <span className="text-[#00f0ff] font-bold">ITM GKP</span>
                     </div>
                   </div>
-                );
-              })}
-            </motion.div>
-          )}
-        </AnimatePresence>
 
-        {/* ── PROBLEM STATEMENT DETAILS MODAL DIALOG ───────────────── */}
-        <AnimatePresence>
-          {selectedModalPS && activePSDetail && (
+                  {/* Verdict citation */}
+                  <div className="p-3 rounded-xl bg-[#08080f] border border-[#231f42] text-xs text-[#b9cacb] italic mt-2">
+                    "Stunning innovation, rapid technical prototyping, and comprehensive implementation across Bharat challenges."
+                  </div>
+                </div>
+
+                {/* Skill tags */}
+                <div className="flex flex-wrap gap-1.5 pt-2">
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#232238] text-[#00f0ff] font-bold">
+                    FULL-STACK ARCHITECTURE
+                  </span>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#232238] text-[#00f0ff] font-bold">
+                    CROSS-COLLEGE EXCELLENCE
+                  </span>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#232238] text-[#00f0ff] font-bold">
+                    RAPID PROTOTYPE
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* ── 1ST PLACE GRAND CHAMPION (Center Slot - Towering & Glowing) ── */}
             <div
-              data-lenis-prevent
-              className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden"
+              className={`lg:col-span-4 rounded-2xl bg-[#121124] border-2 border-[#ffaa00]/50 p-5 sm:p-6 shadow-2xl transition-all duration-500 order-1 lg:order-2 lg:-translate-y-5 flex flex-col justify-between overflow-hidden relative group ${revealed[1] ? "holo-border-gold podium-revealed-1" : ""
+                }`}
             >
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={closeModal}
-                className="fixed inset-0 bg-black/85 backdrop-blur-md transition-opacity"
-              />
+              {/* Top Gold Laser Scanline */}
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#ffaa00] via-[#ffd700] to-[#00f0ff]" />
+              <div className="absolute inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-[#ffd700] to-transparent opacity-40 animate-scanline pointer-events-none" />
 
-              {/* Modal Card */}
-              <motion.div
-                data-lenis-prevent
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-3xl my-auto rounded-3xl border border-white/20 bg-[#0e0e13]/98 shadow-[0_25px_80px_rgba(0,0,0,0.9),0_0_50px_rgba(245,158,11,0.15)] overflow-hidden z-10 flex flex-col max-h-[88vh] sm:max-h-[85vh]"
-              >
-                {/* Modal Top Accent Line */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-emerald-500 to-purple-500 z-20 flex-shrink-0" />
-
-                {/* Modal Header */}
-                <div className="p-5 sm:p-7 border-b border-white/10 bg-white/[0.02] flex-shrink-0">
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs px-2.5 py-1 rounded-md bg-amber-400 text-black font-black tracking-wider">
-                        {activePSDetail.psNo}
-                      </span>
-                      <span className="font-mono text-xs px-3 py-1 rounded-full border border-white/10 bg-white/[0.04] text-neutral-300 flex items-center gap-1.5">
-                        {TRACK_ICONS[activePSDetail.track]}
-                        <span>{activePSDetail.track}</span>
-                      </span>
-                      <span className="font-mono text-xs text-neutral-400 hidden sm:inline">
-                        · {activePSDetail.theme}
-                      </span>
+              {/* ENCRYPTED MYSTERY OVERLAY */}
+              <AnimatePresence>
+                {!revealed[1] && (
+                  <motion.div
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="!absolute inset-0 z-20 bg-[#121124]/98 backdrop-blur-lg flex flex-col items-center justify-center p-6 text-center"
+                  >
+                    <div className="relative w-20 h-20 mb-4 flex items-center justify-center">
+                      <div className="absolute inset-0 rounded-2xl border-2 border-[#ffaa00]/60 animate-pulse shadow-[0_0_25px_rgba(255,170,0,0.5)]" />
+                      <Trophy className="w-10 h-10 text-[#ffd700]" />
                     </div>
+
+                    <span className="font-mono text-xs text-[#ffd700] tracking-widest uppercase font-black drop-shadow-[0_0_10px_rgba(255,170,0,0.6)]">
+                      TOP SECRET // GRAND CHAMPION
+                    </span>
+
+                    <div className="font-mono text-xs text-[#ffd700] my-2 bg-[#151520] px-3 py-1 rounded-md border border-[#ffaa00]/40">
+                      VAULT_HASH: 0x9D..F41C
+                    </div>
+
+                    <p className="font-sans text-xs text-[#b9cacb] max-w-xs mb-6">
+                      Zero-trust multi-jury verified consensus. Unprecedented code precision and architecture.
+                    </p>
 
                     <button
-                      onClick={closeModal}
-                      className="p-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/15 text-neutral-400 hover:text-white transition-colors flex-shrink-0 cursor-pointer"
-                      aria-label="Close dialog"
+                      onClick={() => handleReveal(1)}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#ffaa00] to-[#ffd700] text-black font-mono text-xs font-black uppercase tracking-wider shadow-[0_0_25px_rgba(255,170,0,0.4)] hover:brightness-110 transition-all flex items-center gap-2 cursor-pointer group-hover:scale-105"
                     >
-                      <X className="w-5 h-5" />
+                      <Lock className="w-4 h-4 text-black" />
+                      <span>DECRYPT GRAND CHAMPION</span>
                     </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* REVEALED CONTENT */}
+              <div className="space-y-4">
+                {/* Header Banner */}
+                <div className="flex items-center justify-between pb-3.5 border-b border-[#231f42]/80">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#ffaa00] to-[#ffd700] text-black flex items-center justify-center font-heading text-2xl font-black shadow-[0_0_20px_rgba(255,170,0,0.5)]">
+                      1
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <Trophy className="w-4 h-4 text-[#ffd700]" />
+                        <span className="font-mono text-xs text-[#ffd700] font-black uppercase tracking-wider">
+                          GRAND CHAMPION
+                        </span>
+                      </div>
+                      <span className="font-mono text-[11px] text-[#ffaa00]">
+                        OVERALL BRAWL LAUREATE
+                      </span>
+                    </div>
                   </div>
 
-                  <h3 className="font-sans font-black text-xl sm:text-2xl lg:text-3xl text-white tracking-tight leading-snug">
-                    {activePSDetail.title}
+                  <span className="font-mono text-xs px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#ffaa00] to-[#ffd700] text-black font-black shadow-[0_0_15px_rgba(255,170,0,0.4)]">
+                    1ST PLACE
+                  </span>
+                </div>
+
+                {/* Event Photo Preview */}
+                <div className="relative w-full h-48 rounded-xl overflow-hidden bg-[#151520] border-2 border-[#ffaa00]/40 group-hover:border-[#ffaa00] transition-colors">
+                  <img
+                    src={championThumb}
+                    alt="ByteBrawl Grand Champion Hackathon Coding"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#121124] via-transparent to-transparent" />
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#08080f]/90 border border-[#10b981]/40 shadow-md">
+                    <span className="w-2 h-2 rounded-full bg-[#10b981] animate-ping" />
+                    <span className="font-mono text-[10px] text-[#00f0ff] font-bold">
+                      TRACK: BHOOMI &amp; BHAROSA
+                    </span>
+                  </div>
+                </div>
+
+                {/* Team Info */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] text-[#849495] uppercase">
+                      SQUAD
+                    </span>
+                  </div>
+
+                  <h3 className="font-heading text-2xl sm:text-3xl font-black text-white">
+                    2 Pointer Approach
                   </h3>
 
-                  {/* Team Allotment Spotlight (if team assigned) */}
-                  {selectedModalPS.team && (
-                    <div className="mt-3.5 p-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-amber-400/20 border border-amber-400/30 flex items-center justify-center text-amber-300 flex-shrink-0">
-                          <Users className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-[10px] text-amber-300/80 font-bold uppercase">
-                              ALLOTTED TO TEAM:
-                            </span>
-                            <span className="font-mono text-xs font-bold text-white">
-                              {selectedModalPS.team.teamName}
-                            </span>
-                            <span className="font-mono text-[10px] text-neutral-400">
-                              ({selectedModalPS.team.teamId})
-                            </span>
-                          </div>
-                          <div className="text-xs text-neutral-300 mt-0.5">
-                            <span>{selectedModalPS.team.leader}</span>
-                            {selectedModalPS.team.member && (
-                              <span> & {selectedModalPS.team.member}</span>
-                            )}
-                            <span className="text-neutral-500 ml-2">
-                              • {selectedModalPS.team.college}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 sm:self-center">
-                        <span className="font-mono text-xs font-semibold text-emerald-300 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Round 2 Allotted</span>
-                        </span>
-                      </div>
+                  <div className="space-y-1.5 font-mono text-xs pt-1">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-[#151520] border border-[#ffaa00]/30 shadow-[inset_0_0_10px_rgba(255,170,0,0.1)]">
+                      <span className="text-white font-medium">• Satyam Prajapati</span>
+                      <span className="text-[#ffd700] font-bold">MMMUT</span>
                     </div>
-                  )}
-                </div>
-
-                {/* Modal Body - Scrollable Content */}
-                <div
-                  data-lenis-prevent
-                  tabIndex={0}
-                  onWheel={(e) => e.stopPropagation()}
-                  style={{ overscrollBehavior: "contain", scrollBehavior: "smooth" }}
-                  className="p-5 sm:p-7 overflow-y-auto space-y-5 flex-1 min-h-0 overscroll-contain focus:outline-none [scrollbar-width:thin] [scrollbar-color:#f59e0b_rgba(255,255,255,0.08)] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-white/5 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-thumb]:bg-amber-500/60 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-amber-400"
-                >
-                  {/* 1. Problem / Issue */}
-                  <div className="p-5 rounded-2xl border border-rose-500/25 bg-rose-500/[0.03]">
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <AlertCircle className="w-4 h-4 text-rose-400" />
-                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-rose-300">
-                        Problem // What is the issue?
-                      </span>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-[#151520] border border-[#ffaa00]/30 shadow-[inset_0_0_10px_rgba(255,170,0,0.1)]">
+                      <span className="text-white font-medium">• Nitish Kumar</span>
+                      <span className="text-[#ffd700] font-bold">MMMUT</span>
                     </div>
-                    <p className="font-sans text-sm sm:text-base text-neutral-200 font-light leading-relaxed">
-                      {activePSDetail.problem}
-                    </p>
                   </div>
 
-                  {/* 2. Build / What to make */}
-                  <div className="p-5 rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.03]">
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <Cpu className="w-4 h-4 text-emerald-400" />
-                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-300">
-                        Build // What to make (MVP & Architecture)
-                      </span>
-                    </div>
-                    <p className="font-sans text-sm sm:text-base text-neutral-200 font-light leading-relaxed">
-                      {activePSDetail.build}
-                    </p>
+                  {/* Verdict citation */}
+                  <div className="p-3 rounded-xl bg-[#08080f] border border-[#ffaa00]/30 text-xs text-[#ffd700] italic mt-2">
+                    "Exceptional algorithmic precision, architectural resilience, and production-grade execution under tight constraints."
                   </div>
-
-                  {/* 3. Key Point / Constraints */}
-                  <div className="p-5 rounded-2xl border border-amber-500/25 bg-amber-500/[0.03]">
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <Lightbulb className="w-4 h-4 text-amber-400" />
-                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-300">
-                        Key Point // What to keep in mind & safeguard
-                      </span>
-                    </div>
-                    <p className="font-sans text-sm sm:text-base text-neutral-200 font-light leading-relaxed">
-                      {activePSDetail.keyPoint}
-                    </p>
-                  </div>
-
-                  {/* 4. Guiding Building Principle */}
-                  {activePSDetail.principle && (
-                    <div className="p-4 rounded-xl border border-white/10 bg-black/40 flex items-start gap-3">
-                      <Quote className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-400 block mb-0.5">
-                          Guiding Track Principle
-                        </span>
-                        <p className="font-sans text-sm text-amber-200 font-medium italic">
-                          "{activePSDetail.principle}"
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* Modal Footer */}
-                <div className="p-4 sm:p-5 border-t border-white/10 bg-[#0a0a0d] flex items-center justify-between gap-4 flex-shrink-0">
-                  <button
-                    onClick={() =>
-                      handleCopy(
-                        `${activePSDetail.psNo}: ${activePSDetail.title}\n\nTrack: ${activePSDetail.track}\nTheme: ${activePSDetail.theme}\n\nPROBLEM:\n${activePSDetail.problem}\n\nBUILD:\n${activePSDetail.build}\n\nKEY POINT:\n${activePSDetail.keyPoint}\n\nPRINCIPLE:\n${activePSDetail.principle}`
-                      )
-                    }
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white font-mono text-xs uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400 font-bold">Copied to Clipboard!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 text-neutral-400" />
-                        <span>Copy Brief</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={closeModal}
-                    className="px-6 py-2 rounded-xl bg-white text-black font-mono text-xs uppercase font-bold tracking-wider hover:bg-neutral-200 transition-colors shadow-md cursor-pointer"
-                  >
-                    Close
-                  </button>
+                {/* Skill tags */}
+                <div className="flex flex-wrap gap-1.5 pt-2">
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#ffaa00]/20 text-[#ffd700] font-bold">
+                    ALGORITHMIC PRECISION
+                  </span>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#ffaa00]/20 text-[#ffd700] font-bold">
+                    RESILIENT SYSTEM
+                  </span>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#ffaa00]/20 text-[#ffd700] font-bold">
+                    PRODUCTION GRADE
+                  </span>
                 </div>
-              </motion.div>
+              </div>
             </div>
-          )}
-        </AnimatePresence>
+
+            {/* ── 3RD PLACE PODIUM (Right Slot - Cols 9-12) ─────────────── */}
+            <div
+              className={`lg:col-span-4 rounded-2xl bg-[#121124] border border-[#231f42] p-5 sm:p-6 shadow-2xl transition-all duration-500 order-3 flex flex-col justify-between overflow-hidden relative group ${revealed[3]
+                  ? "holo-border-bronze shadow-[0_0_35px_rgba(205,127,50,0.25)]"
+                  : ""
+                }`}
+            >
+              {/* Laser scanline */}
+              <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-[#cd7f32] to-transparent opacity-30 animate-scanline pointer-events-none" />
+
+              {/* ENCRYPTED MYSTERY OVERLAY */}
+              <AnimatePresence>
+                {!revealed[3] && (
+                  <motion.div
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="!absolute inset-0 z-20 bg-[#121124]/98 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center"
+                  >
+                    <div className="relative w-16 h-16 mb-4 flex items-center justify-center">
+                      <div
+                        className="absolute inset-0 rounded-2xl border-2 border-dashed border-[#cd7f32]/40 animate-spin"
+                        style={{ animationDuration: "14s" }}
+                      />
+                      <span className="font-heading text-3xl font-black text-[#cd7f32]">
+                        3
+                      </span>
+                    </div>
+
+                    <span className="font-mono text-xs text-[#cd7f32] tracking-widest uppercase font-bold">
+                      3RD PLACE // 2ND RUNNER UP
+                    </span>
+
+                    <div className="font-mono text-[11px] text-[#849495] my-2 bg-[#151520] px-2.5 py-1 rounded border border-[#231f42]">
+                      VAULT_HASH: 0x3C..89B1
+                    </div>
+
+                    <p className="font-sans text-xs text-[#b9cacb] max-w-xs mb-5">
+                      Double-blind technical evaluation sealed. Robust problem-solving strategy and creative architecture.
+                    </p>
+
+                    <button
+                      onClick={() => handleReveal(3)}
+                      className="px-4 py-2 rounded-xl bg-[#1a1926] hover:bg-[#232238] text-[#cd7f32] font-mono text-xs font-bold border border-[#cd7f32]/40 shadow-[0_0_15px_rgba(205,127,50,0.2)] transition-all flex items-center gap-1.5 cursor-pointer group-hover:scale-105"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>DECRYPT REVEAL</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* REVEALED CONTENT */}
+              <div className="space-y-4">
+                {/* Header Badge */}
+                <div className="flex items-center justify-between pb-3.5 border-b border-[#231f42]/70">
+                  <div className="flex items-center gap-3">
+                    <span className="w-9 h-9 rounded-xl bg-[#1a1926] flex items-center justify-center font-heading text-xl text-[#cd7f32] font-black border border-[#cd7f32]/40 shadow-[0_0_12px_rgba(205,127,50,0.15)]">
+                      3
+                    </span>
+                    <div>
+                      <span className="font-mono text-[11px] text-[#cd7f32] font-bold uppercase tracking-wider block">
+                        2ND RUNNER UP
+                      </span>
+                      <span className="font-mono text-[10px] text-[#849495]">
+                        BYTEBRAWL 2026
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="font-mono text-xs px-3 py-1 rounded-lg bg-[#1a1926] text-[#cd7f32] font-extrabold border border-[#cd7f32]/30 shadow-[0_0_10px_rgba(205,127,50,0.2)]">
+                    3RD PLACE
+                  </span>
+                </div>
+
+                {/* Event Photo Preview */}
+                <div className="relative w-full h-44 rounded-xl overflow-hidden bg-[#151520] border border-[#231f42] group-hover:border-[#cd7f32]/40 transition-colors">
+                  <img
+                    src={secondRunnerUpThumb}
+                    alt="ByteBrawl 2nd Runner Up Team Collaboration"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#121124] via-transparent to-transparent" />
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#08080f]/90 font-mono text-[10px] text-[#cd7f32] border border-[#cd7f32]/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#cd7f32] animate-pulse" />
+                    <span>TRACK: SATYA &amp; PRAMAAN</span>
+                  </div>
+                </div>
+
+                {/* Team Info */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] text-[#849495] uppercase">
+                      SQUAD
+                    </span>
+                  </div>
+
+                  <h3 className="font-heading text-2xl font-black text-white">
+                    Team nakshatra
+                  </h3>
+
+                  <div className="space-y-1.5 font-mono text-xs pt-1">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-[#151520] border border-[#231f42]">
+                      <span className="text-white font-medium">• Nitin Kumar</span>
+                      <span className="text-[#cd7f32] font-bold">MMMUT</span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-[#151520] border border-[#231f42]">
+                      <span className="text-white font-medium">• Swati Kushwaha</span>
+                      <span className="text-[#cd7f32] font-bold">MMMUT</span>
+                    </div>
+                  </div>
+
+                  {/* Verdict citation */}
+                  <div className="p-3 rounded-xl bg-[#08080f] border border-[#231f42] text-xs text-[#b9cacb] italic mt-2">
+                    "Impressive domain execution, robust problem-solving strategy, and creative architectural design."
+                  </div>
+                </div>
+
+                {/* Skill tags */}
+                <div className="flex flex-wrap gap-1.5 pt-2">
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#232238] text-[#cd7f32] font-bold">
+                    DOMAIN EXECUTION
+                  </span>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#232238] text-[#cd7f32] font-bold">
+                    TRANSPARENCY PIPELINE
+                  </span>
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-[#232238] text-[#cd7f32] font-bold">
+                    CREATIVE DESIGN
+                  </span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* ── SPECIAL APPRECIATION HONORS (4TH & 5TH POSITION) ──────────── */}
+        <div className="relative z-10 max-w-6xl mx-auto my-12">
+          <div className="p-6 sm:p-7 rounded-2xl bg-[#121124] border border-[#231f42] shadow-2xl backdrop-blur-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-[#231f42]">
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-[#ffd700]" />
+                <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-white tracking-wide">
+                  Special Appreciation Honors
+                </h3>
+              </div>
+              <span className="font-mono text-xs text-[#00f0ff] bg-[#00f0ff]/10 border border-[#00f0ff]/30 px-3 py-1 rounded-full w-fit">
+                4TH &amp; 5TH POSITION // OFFICIAL MERIT
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 4th Position: P2 */}
+              <div className="p-5 rounded-xl bg-[#151520] border border-[#231f42] hover:border-[#00f0ff]/40 transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-xs text-[#ffd700] font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#ffd700]" />
+                    ★ 4TH POSITION
+                  </span>
+                  <span className="font-mono text-[10px] text-[#00f0ff] bg-[#00f0ff]/10 px-2 py-0.5 rounded border border-[#00f0ff]/20">
+                    Swasthya &amp; Seva
+                  </span>
+                </div>
+
+                <div className="font-heading text-2xl font-black text-white mb-3">
+                  P²
+                </div>
+
+                <div className="space-y-2 font-mono text-xs">
+                  <div className="flex items-center justify-between p-2 rounded bg-[#08080f] border border-[#231f42]">
+                    <span className="text-[#e4e1ed]">• Priyanshu Mishra</span>
+                    <span className="text-[#00f0ff] font-bold">MMMUT</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded bg-[#08080f] border border-[#231f42]">
+                    <span className="text-[#e4e1ed]">• Priyanshu Rai</span>
+                    <span className="text-[#00f0ff] font-bold">MMMUT</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5th Position: Supic */}
+              <div className="p-5 rounded-xl bg-[#151520] border border-[#231f42] hover:border-[#00f0ff]/40 transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-mono text-xs text-[#ffd700] font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#ffd700]" />
+                    ★ 5TH POSITION
+                  </span>
+                  <span className="font-mono text-[10px] text-[#00f0ff] bg-[#00f0ff]/10 px-2 py-0.5 rounded border border-[#00f0ff]/20">
+                    Suraksha &amp; Shasan
+                  </span>
+                </div>
+
+                <div className="font-heading text-2xl font-black text-white mb-3">
+                  Supic
+                </div>
+
+                <div className="space-y-2 font-mono text-xs">
+                  <div className="flex items-center justify-between p-2 rounded bg-[#08080f] border border-[#231f42]">
+                    <span className="text-[#e4e1ed]">• Epshita Somani</span>
+                    <span className="text-[#00f0ff] font-bold">MMMUT</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded bg-[#08080f] border border-[#231f42]">
+                    <span className="text-[#e4e1ed]">• Shaurya Bhatt</span>
+                    <span className="text-[#00f0ff] font-bold">MMMUT</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── TWO-COLUMN HUB: COLLEGE REGISTRATIONS + OFFICIAL CIRCULAR ──── */}
+        <div className="relative z-10 max-w-6xl mx-auto my-12 grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+
+          {/* 1. College Registrations & Regional Representation */}
+          <div className="p-6 sm:p-7 rounded-2xl border border-[#00f0ff]/30 bg-[#081622]/95 backdrop-blur-md shadow-[0_0_35px_rgba(0,240,255,0.12)] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-mono font-black text-lg sm:text-xl text-white tracking-wider uppercase flex items-center gap-2">
+                  <Cpu className="w-5 h-5 text-[#00f0ff]" />
+                  <span>COLLEGE REGISTRATIONS</span>
+                </h3>
+                <span className="font-mono text-[10px] text-[#00f0ff] bg-[#00f0ff]/10 px-2.5 py-1 rounded-full border border-[#00f0ff]/30">
+                  EASTERN UP TECH REGION
+                </span>
+              </div>
+
+              {/* 3 Metric Badges */}
+              <div className="grid grid-cols-3 gap-2.5 sm:gap-3 mb-6">
+                {COLLEGE_REGISTRATIONS.stats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="p-3 sm:p-3.5 rounded-lg border border-[#00f0ff]/40 bg-[#081c28]/90 text-center shadow-[inset_0_0_15px_rgba(0,240,255,0.12)]"
+                  >
+                    <span className="font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#b9cacb] block mb-0.5">
+                      {stat.label}
+                    </span>
+                    <span className="font-mono text-xl sm:text-2xl font-black text-[#00f0ff] block tracking-tight">
+                      {stat.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Table Header */}
+              <div className="flex items-center gap-4 px-3 mb-2 font-mono text-[11px] font-bold uppercase tracking-widest text-[#849495]">
+                <span className="w-8">#</span>
+                <span>COLLEGE / UNIVERSITY</span>
+              </div>
+
+              {/* Colleges List */}
+              <div className="space-y-2">
+                {COLLEGE_REGISTRATIONS.colleges.map((col) => (
+                  <div
+                    key={col.rank}
+                    className="flex items-center gap-4 px-4 py-2.5 rounded-md border border-[#00f0ff]/30 bg-[#081622]/90 shadow-[0_2px_10px_rgba(0,240,255,0.15)] hover:border-[#00f0ff] transition-colors"
+                  >
+                    <span
+                      className={`w-8 font-mono text-sm font-black ${col.isHighlighted ? "text-[#ffd700]" : "text-[#b9cacb]"
+                        }`}
+                    >
+                      {col.rank}
+                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-sans font-bold text-sm sm:text-base text-white tracking-wide">
+                        {col.name}
+                      </span>
+                      <span className="font-mono text-[11px] text-[#849495] hidden sm:inline">
+                        — {col.fullName}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 pt-3 border-t border-[#00f0ff]/20 flex items-center justify-between text-[11px] font-mono text-[#b9cacb]">
+              <span>VERIFIED PARTICIPATION</span>
+              <span>CERTIFIED EVENT TALLY</span>
+            </div>
+          </div>
+
+          {/* 2. Official Circular Snapshot Card */}
+          <div className="p-6 sm:p-7 rounded-2xl border border-[#231f42] bg-[#121124]/95 backdrop-blur-md flex flex-col justify-between shadow-2xl">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[#b9cacb] font-mono text-xs mb-4">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#10b981]" />
+                <span>VERIFIED OFFICIAL CIRCULAR</span>
+              </div>
+
+              <h4 className="font-heading font-black text-xl sm:text-2xl text-white mb-3">
+                Official Result Notification Circular
+              </h4>
+
+              <p className="font-sans text-xs sm:text-sm text-[#b9cacb] font-light leading-relaxed mb-6">
+                The official final round results circular issued by FLUX and
+                Department of Computer Science &amp; Engineering, Madan Mohan
+                Malaviya University of Technology. You can examine the certified
+                result snapshot or check the official announcement on the FLUX
+                Instagram handle.
+              </p>
+
+              {/* Circular Snapshot Thumbnail */}
+              <div
+                onClick={() => setIsCircularModalOpen(true)}
+                className="relative w-full aspect-[16/9] sm:aspect-[2/1] rounded-xl overflow-hidden border border-[#231f42] bg-white/5 shadow-xl cursor-pointer group mb-6"
+              >
+                <img
+                  src={resultCircularImg}
+                  alt="Official Final Result Circular"
+                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                  <div className="px-4 py-2 rounded-xl bg-black/80 backdrop-blur-md border border-white/30 text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 group-hover:scale-110 transition-transform">
+                    <Eye className="w-4 h-4 text-[#ffd700]" />
+                    <span>View Snapshot</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                onClick={() => setIsCircularModalOpen(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-black font-mono text-xs font-bold uppercase tracking-wider hover:bg-neutral-200 transition-colors cursor-pointer"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Expand Snapshot</span>
+              </button>
+              <a
+                href={FINAL_RESULT_META.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-amber-500/20 hover:from-pink-500/30 hover:to-purple-500/30 border border-pink-500/35 hover:border-pink-500/60 text-white font-mono text-xs font-semibold uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(236,72,153,0.2)] group"
+              >
+                <Instagram className="w-4 h-4 text-pink-400 group-hover:scale-110 transition-transform" />
+                <span>View on Instagram</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── COORDINATORS & ENDORSEMENT FOOTER STRIP ───────────────────── */}
+
       </Container>
+
+      {/* ── FULLSCREEN CIRCULAR SNAPSHOT MODAL ─────────────────────────── */}
+      <AnimatePresence>
+        {isCircularModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCircularModalOpen(false)}
+              className="absolute inset-0 cursor-pointer"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-2xl max-h-[92vh] rounded-3xl border border-[#231f42] bg-[#0e0e13] shadow-[0_25px_80px_rgba(0,0,0,0.9)] overflow-hidden z-10 flex flex-col"
+            >
+              <div className="p-4 sm:p-5 border-b border-[#231f42] flex items-center justify-between gap-4 bg-white/[0.02]">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-[#ffd700]" />
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+                    Official Final Round Result Circular
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={FINAL_RESULT_META.instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-pink-500/20 to-purple-500/20 hover:from-pink-500/30 hover:to-purple-500/30 border border-pink-500/30 text-white font-mono text-xs font-bold uppercase tracking-wider transition-colors hover:text-pink-300"
+                  >
+                    <Instagram className="w-3.5 h-3.5 text-pink-400" />
+                    <span>Instagram</span>
+                  </a>
+                  <button
+                    onClick={() => setIsCircularModalOpen(false)}
+                    className="p-1.5 rounded-lg border border-white/10 hover:bg-white/10 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 flex items-center justify-center bg-black/60">
+                <img
+                  src={resultCircularImg}
+                  alt="Official Final Round Result Circular"
+                  className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl border border-white/10"
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

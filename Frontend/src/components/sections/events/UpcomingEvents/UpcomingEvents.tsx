@@ -29,12 +29,12 @@ export interface EventProps {
 const events: EventProps[] = [
   {
     id: 1,
-    title: 'ByteBrawl x Hacktoberfest',
-    date: '26 - 29 October, 2026',
+    title: 'ByteBrawl x Hacktoberfest (Winners Announced 🏆)',
+    date: '26 - 29 October, 2026 (Concluded)',
     description:
-      "High-intensity competitive coding showdown where architectural resilience meets rapid implementation under strict production-grading constraints. Organized by FLUX, Department of CSE, MMMUT Gorakhpur.",
+      "High-intensity competitive coding showdown successfully concluded! Final round winners announced: 1st: 2 Pointer Approach (MMMUT), 2nd: Quarks (ITM), 3rd: Team nakshatra (MMMUT), with special honors to P² & Supic. Organized by FLUX, Department of CSE, MMMUT Gorakhpur.",
     imageUrl: conferenceImg,
-    isUpcoming: true,
+    isUpcoming: false,
     location: 'Alan Turing Hall, MMMUT',
     attendees: 300,
     category: 'Innovation',

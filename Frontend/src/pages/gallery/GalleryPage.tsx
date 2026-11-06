@@ -16,14 +16,14 @@ import {
   Layers,
   Tag,
   Users,
-  Play,
   Grid3x3,
-  Maximize2,
   Download,
   Share2,
   Heart,
   Bookmark,
+  Trophy,
 } from "lucide-react";
+import { bytebrawlGalleryData } from "@/data/bytebrawlGalleryData";
 
 // ─── Hero Slider Image Imports ────────────────────────────────────────────────
 import slider1 from "@/assets/images/ideathoncomp.webp";
@@ -68,10 +68,12 @@ import ideathon13 from "@/assets/Ideathon 2025/WhatsApp Image 2026-07-28 at 9.15
 interface GalleryItem {
   id: string;
   title: string;
-  category: "Events" | "Hackathons" | "Workshops" | "Team" | "Induction" | "Ideathon";
+  category: "ByteBrawl" | "Events" | "Hackathons" | "Workshops" | "Team" | "Induction" | "Ideathon";
   date: string;
   image: string;
+  thumbnail?: string;
   aspect?: "tall" | "wide" | "square";
+  filename?: string;
 }
 
 // ─── Lazy Image ────────────────────────────────────────────────────────────────
@@ -123,53 +125,52 @@ const ideathonGalleryData: GalleryItem[] = [
   { id: "ideathon-12", title: "Ideathon 2025", category: "Ideathon", date: "Dec 2025", image: ideathon13, aspect: "square" },
 ];
 
-const allGalleryData = [
+const allGalleryData: GalleryItem[] = [
+  ...bytebrawlGalleryData,
   ...ideathonGalleryData,
   ...inductionGalleryData,
   ...workshopGlobGalleryData,
 ];
 
-// ─── DomeGallery image pool ────────────────────────────────────────────────────
-const domeGalleryImages = [
-  { src: induction01, alt: "FLUX Induction 2026" },
-  { src: ideathon01,  alt: "Ideathon 2025" },
-  { src: workshop01,  alt: "Expert Session 2025" },
-  { src: induction03, alt: "FLUX Induction 2026" },
-  { src: ideathon03,  alt: "Ideathon 2025" },
-  { src: workshop03,  alt: "Expert Session 2025" },
-  { src: induction05, alt: "FLUX Induction 2026" },
-  { src: ideathon05,  alt: "Ideathon 2025" },
-  { src: workshop05,  alt: "Expert Session 2025" },
-  { src: induction07, alt: "FLUX Induction 2026" },
-  { src: ideathon07,  alt: "Ideathon 2025" },
-  { src: workshop07,  alt: "Expert Session 2025" },
-  { src: induction09, alt: "FLUX Induction 2026" },
-  { src: ideathon09,  alt: "Ideathon 2025" },
-  { src: induction02, alt: "FLUX Induction 2026" },
-  { src: ideathon02,  alt: "Ideathon 2025" },
-  { src: workshop02,  alt: "Expert Session 2025" },
-  { src: induction04, alt: "FLUX Induction 2026" },
-  { src: ideathon04,  alt: "Ideathon 2025" },
-  { src: workshop04,  alt: "Expert Session 2025" },
-  { src: ideathon06,  alt: "Ideathon 2025" },
-  { src: workshop06,  alt: "Expert Session 2025" },
-  { src: ideathon08,  alt: "Ideathon 2025" },
-  { src: workshop08,  alt: "Expert Session 2025" },
-  { src: ideathon10,  alt: "Ideathon 2025" },
-  { src: ideathon11,  alt: "Ideathon 2025" },
-  { src: ideathon12,  alt: "Ideathon 2025" },
-  { src: ideathon13,  alt: "Ideathon 2025" },
-];
+// ─── DomeGallery image pool (180+ unique images ensuring zero repetitions across all 175 dome slots) ──
+const domeGalleryImages: { src: string; alt: string }[] = (() => {
+  const result: { src: string; alt: string }[] = [];
+  const otherItems = [
+    ...inductionGalleryData,
+    ...workshopGlobGalleryData,
+    ...ideathonGalleryData,
+  ];
+
+  let otherIdx = 0;
+  let bbIdx = 0;
+
+  // Interleave other categories with ByteBrawl photos to produce 180 unique tiles
+  while (result.length < 180 && (bbIdx < bytebrawlGalleryData.length || otherIdx < otherItems.length)) {
+    if (result.length % 5 === 1 && otherIdx < otherItems.length) {
+      const item = otherItems[otherIdx++];
+      result.push({ src: item.thumbnail || item.image, alt: item.title || item.category });
+    } else if (bbIdx < bytebrawlGalleryData.length) {
+      const item = bytebrawlGalleryData[bbIdx++];
+      result.push({ src: item.thumbnail || item.image, alt: item.title || item.category });
+    } else if (otherIdx < otherItems.length) {
+      const item = otherItems[otherIdx++];
+      result.push({ src: item.thumbnail || item.image, alt: item.title || item.category });
+    }
+  }
+
+  return result;
+})();
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
-const categories = ["All", "Ideathon", "Workshops", "Induction"] as const;
-const ITEMS_PER_PAGE = 15;
+const categories = ["All", "ByteBrawl", "Ideathon", "Workshops", "Induction"] as const;
+const ITEMS_PER_PAGE = 60;
 
 const categoryMeta: Record<
   (typeof categories)[number],
   { icon: React.ReactNode; color: string; gradient: string }
 > = {
   All:       { icon: <Layers      size={14} />, color: "#E5E5E5", gradient: "from-white/20 to-gray-400/20" },
+  ByteBrawl: { icon: <Trophy      size={14} />, color: "#F59E0B", gradient: "from-amber-400/20 to-yellow-600/20" },
   Ideathon:  { icon: <Sparkles    size={14} />, color: "#E5E5E5", gradient: "from-white/20 to-gray-400/20" },
   Workshops: { icon: <Tag         size={14} />, color: "#E5E5E5", gradient: "from-white/20 to-gray-400/20" },
   Induction: { icon: <Users       size={14} />, color: "#FFFFFF", gradient: "from-white/30 to-gray-300/30" },
@@ -227,7 +228,6 @@ export default function GalleryPage({ isMobile }: { isMobile?: boolean }) {
 
   // ── Reset on filter change ──────────────────────────────────────────────────
   useEffect(() => {
-    setLightboxIndex(null);
     setVisibleCount(ITEMS_PER_PAGE);
   }, [selectedCategory]);
 
@@ -539,8 +539,8 @@ export default function GalleryPage({ isMobile }: { isMobile?: boolean }) {
                 {/* Image */}
                 <div className={`relative w-full overflow-hidden bg-black/40 ${aspectClass(item.aspect)}`}>
                   <LazyImage
-                    src={item.image}
-                    alt={item.title}
+                    src={item.thumbnail || item.image}
+                    alt={item.category}
                     className="w-full h-full object-cover object-center
                       group-hover:scale-110 transition-transform duration-700 ease-out"
                   />
@@ -549,24 +549,16 @@ export default function GalleryPage({ isMobile }: { isMobile?: boolean }) {
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent 
                     opacity-60 group-hover:opacity-90 transition-opacity duration-400" />
 
-                  {/* Hover reveal: full info overlay */}
+                  {/* Hover reveal: clean icon and category overlay */}
                   <motion.div 
                     className="absolute inset-0 flex flex-col justify-end p-5
                       opacity-0 group-hover:opacity-100 transition-all duration-400
                       translate-y-4 group-hover:translate-y-0"
                   >
-                    <div className="flex items-end justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <span className="text-white/80 text-[10px] font-bold uppercase tracking-widest mb-1 block">
-                          {item.category}
-                        </span>
-                        <h3
-                          className="text-white font-bold text-sm sm:text-base leading-snug line-clamp-2"
-                        >
-                          {item.title}
-                        </h3>
-                        <span className="text-white/60 text-[10px] mt-1 block">{item.date}</span>
-                      </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-white/80 text-[11px] font-bold uppercase tracking-widest block">
+                        {item.category}
+                      </span>
                       <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md text-white
                         flex items-center justify-center border border-white/20 shrink-0
                         group-hover:bg-[#E5E5E5] group-hover:text-black transition-colors duration-300">
@@ -719,7 +711,7 @@ export default function GalleryPage({ isMobile }: { isMobile?: boolean }) {
                   >
                     <LazyImage
                       src={activeItem.image}
-                      alt={activeItem.title}
+                      alt={activeItem.category}
                       className="max-w-full max-h-[60vh] object-contain rounded-xl shadow-2xl"
                     />
                   </motion.div>
@@ -730,28 +722,31 @@ export default function GalleryPage({ isMobile }: { isMobile?: boolean }) {
               <div className="px-6 py-5 bg-gradient-to-t from-[#020202] to-transparent
                 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1">
-                    {activeItem.title}
-                  </h2>
-                  <div className="flex items-center gap-3 text-sm text-gray-400 font-medium">
-                    <span className="text-[#E5E5E5]">{activeItem.category}</span>
-                    <span>•</span>
-                    <span>{activeItem.date}</span>
-                  </div>
+                  <span className="text-xs font-mono font-bold uppercase tracking-widest text-[#E5E5E5]">
+                    {activeItem.category}
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white font-medium text-sm">
                     {lightboxIndex + 1} / {filteredItems.length}
                   </div>
                   <motion.button 
-                    className="p-2 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+                    className="p-2 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all cursor-pointer"
                     whileHover={{ scale: 1.1 }}
+                    onClick={() => window.open(activeItem.image, "_blank")}
+                    title="Open high-resolution original in new tab"
                   >
                     <Download size={16} />
                   </motion.button>
                   <motion.button 
-                    className="p-2 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all"
+                    className="p-2 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all cursor-pointer"
                     whileHover={{ scale: 1.1 }}
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(activeItem.image);
+                      }
+                    }}
+                    title="Copy image link"
                   >
                     <Share2 size={16} />
                   </motion.button>
@@ -768,10 +763,10 @@ export default function GalleryPage({ isMobile }: { isMobile?: boolean }) {
                   <motion.button
                     key={item.id}
                     onClick={e => { e.stopPropagation(); setLightboxIndex(idx); }}
-                    className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden transition-all duration-300 relative"
+                    className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden transition-all duration-300 relative cursor-pointer"
                     whileHover={{ scale: 1.1 }}
                   >
-                    <LazyImage src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                    <LazyImage src={item.thumbnail || item.image} alt={item.category} className="w-full h-full object-cover" />
                     <motion.div 
                       className={`absolute inset-0 transition-colors duration-300 ${idx === lightboxIndex ? 'border-2 border-[#E5E5E5] bg-transparent' : 'bg-black/50 hover:bg-black/20'}`}
                       animate={idx === lightboxIndex ? { scale: [1, 1.05, 1] } : {}}

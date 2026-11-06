@@ -178,14 +178,15 @@ export default function ByteBrawlHeroPopup({ isMobile = false }: ByteBrawlHeroPo
 
                   {/* ==================== 1. TOP HEADER ROW ==================== */}
                   <div className="flex items-center justify-between gap-2 mb-2.5 relative z-10">
-                    {/* Left: "REGISTRATIONS LIVE" Glass Pill */}
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 border border-rose-500/35 shadow-[0_0_12px_rgba(244,63,94,0.22),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-md">
+                    {/* Left: "WINNERS DECLARED" Glass Pill */}
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.3),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-md">
                       {/* Indicator Dot */}
                       <span className="relative flex h-2.5 w-2.5">
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-400 shadow-[0_0_8px_#f43f5e]" />
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400 shadow-[0_0_8px_#f59e0b]" />
                       </span>
-                      <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.2em] font-black text-rose-300 uppercase drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                        REGISTRATIONS CLOSED
+                      <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.2em] font-black text-amber-300 uppercase drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] flex items-center gap-1">
+                        WINNERS DECLARED 🏆
                       </span>
                     </div>
 
@@ -248,7 +249,7 @@ export default function ByteBrawlHeroPopup({ isMobile = false }: ByteBrawlHeroPo
                       </div>
                     </div>
                     <p className="text-[11px] sm:text-xs text-neutral-300 mt-1 line-clamp-2 font-normal leading-relaxed">
-                      Hackathon &amp; Open-source sprint. Build, innovate, and compete for exciting awards.
+                      Final Round Results Declared! Congratulations to Champions 2 Pointer Approach, Quarks, Team nakshatra &amp; all finalists.
                     </p>
                   </div>
 
@@ -273,7 +274,7 @@ export default function ByteBrawlHeroPopup({ isMobile = false }: ByteBrawlHeroPo
                       className="relative flex-1 h-12 min-h-[48px] rounded-xl cursor-pointer group overflow-hidden transition-all duration-300 transform active:scale-[0.98]"
                       style={{
                         background:
-                          "linear-gradient(180deg, rgba(255,255,255,0.75) 0%, rgba(180,215,245,0.3) 48%, rgba(80,130,175,0.25) 52%, rgba(175,220,255,0.45) 85%, rgba(230,245,255,0.8) 100%)",
+                          "linear-gradient(180deg, rgba(252,211,77,0.95) 0%, rgba(245,158,11,0.85) 50%, rgba(217,119,6,0.95) 100%)",
                         boxShadow:
                           "inset 0 1px 1px 0 rgba(255,255,255,1), inset 0 -2px 5px 0 rgba(0,25,50,0.5), inset 0 0 14px 0 rgba(190,230,255,0.6), 0 0 24px 0 rgba(200,235,255,0.4), 0 8px 24px 0 rgba(0,0,0,0.75)",
                         border: "1px solid rgba(255,255,255,0.6)",
@@ -299,11 +300,11 @@ export default function ByteBrawlHeroPopup({ isMobile = false }: ByteBrawlHeroPo
 
                       {/* Stacked Button Typography */}
                       <div className="relative z-10 flex flex-col items-center justify-center h-full leading-tight">
-                        <span className="font-mono text-[10px] sm:text-[11px] font-black tracking-[0.16em] text-white/90 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] uppercase">
-                          REGISTRATION
+                        <span className="font-mono text-[10px] sm:text-[11px] font-black tracking-[0.16em] text-black drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)] uppercase flex items-center gap-1">
+                          VIEW WINNERS 🏆
                         </span>
-                        <span className="font-mono text-[9px] sm:text-[10px] font-black tracking-[0.14em] text-rose-300 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] uppercase flex items-center gap-0.5 mt-0.5">
-                          CLOSED ✕
+                        <span className="font-mono text-[8.5px] sm:text-[9.5px] font-bold tracking-[0.14em] text-neutral-800 uppercase flex items-center gap-0.5 mt-0.5">
+                          OFFICIAL PODIUM
                         </span>
                       </div>
                     </button>
@@ -346,7 +347,7 @@ export default function ByteBrawlHeroPopup({ isMobile = false }: ByteBrawlHeroPo
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white shadow-[0_0_8px_#ffffff]" />
               </span>
-              <span className="text-white font-bold tracking-wider">BYTEBRAWL INFO</span>
+              <span className="text-amber-300 font-bold tracking-wider">BYTEBRAWL WINNERS 🏆</span>
               <Sparkles className="w-3.5 h-3.5 text-white/80 group-hover:rotate-12 transition-transform" />
             </button>
           </motion.div>
