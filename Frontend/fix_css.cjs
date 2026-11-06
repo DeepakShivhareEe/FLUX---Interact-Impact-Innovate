@@ -1,1 +1,0 @@
-const fs = require("fs"); let css = fs.readFileSync("src/index.css", "utf8"); const str = "@import url(\"https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap\");"; css = css.replace(str, ""); css = str + "\n" + css; fs.writeFileSync("src/index.css", css, "utf8");
