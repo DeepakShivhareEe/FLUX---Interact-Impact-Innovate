@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import gsap from "gsap";
 import Marquee from "@/components/ui/Marquee";
 import Container from "@/components/layout/Container";
-import ByteBrawlHeroPopup from "./ByteBrawlHeroPopup";
 
 import { introManager } from "@/lib/introState";
 
@@ -270,10 +269,6 @@ export default function Hero() {
             </button>
           </div>
 
-          {/* 3D Immersive ByteBrawl Registration Popup on Mobile */}
-          <div className="w-full max-w-sm mt-1 mb-4 flex justify-center">
-            <ByteBrawlHeroPopup isMobile={true} />
-          </div>
 
           {/* Persistent 3D Logo Anchor on tablet (hidden on mobile < 768px) */}
           <div
@@ -324,8 +319,6 @@ export default function Hero() {
         </Container>
       </div>
 
-      {/* 3D Immersive Floating ByteBrawl Registration Popup */}
-      <ByteBrawlHeroPopup isMobile={false} />
 
       {/* Subtle bottom fade to seamlessly blend into subsequent sections */}
       <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-[#060606] to-transparent pointer-events-none z-[5]" />
