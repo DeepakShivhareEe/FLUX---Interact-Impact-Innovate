@@ -132,44 +132,34 @@ const allGalleryData: GalleryItem[] = [
   ...workshopGlobGalleryData,
 ];
 
-// ─── DomeGallery image pool ────────────────────────────────────────────────────
-const domeGalleryImages = [
-  { src: bytebrawlGalleryData[0].thumbnail, alt: "ByteBrawl 2026 Arena" },
-  { src: induction01, alt: "FLUX Induction 2026" },
-  { src: bytebrawlGalleryData[2].thumbnail, alt: "ByteBrawl Team Collaboration" },
-  { src: ideathon01,  alt: "Ideathon 2025" },
-  { src: workshop01,  alt: "Expert Session 2025" },
-  { src: bytebrawlGalleryData[5].thumbnail, alt: "ByteBrawl Mentor Consultation" },
-  { src: induction03, alt: "FLUX Induction 2026" },
-  { src: bytebrawlGalleryData[8].thumbnail, alt: "ByteBrawl Evaluation" },
-  { src: ideathon03,  alt: "Ideathon 2025" },
-  { src: workshop03,  alt: "Expert Session 2025" },
-  { src: bytebrawlGalleryData[12].thumbnail, alt: "ByteBrawl Coding Duel" },
-  { src: induction05, alt: "FLUX Induction 2026" },
-  { src: bytebrawlGalleryData[18].thumbnail, alt: "ByteBrawl Team Showcase" },
-  { src: ideathon05,  alt: "Ideathon 2025" },
-  { src: workshop05,  alt: "Expert Session 2025" },
-  { src: induction07, alt: "FLUX Induction 2026" },
-  { src: ideathon07,  alt: "Ideathon 2025" },
-  { src: workshop07,  alt: "Expert Session 2025" },
-  { src: bytebrawlGalleryData[22].thumbnail, alt: "ByteBrawl Winners Celebration" },
-  { src: induction09, alt: "FLUX Induction 2026" },
-  { src: ideathon09,  alt: "Ideathon 2025" },
-  { src: induction02, alt: "FLUX Induction 2026" },
-  { src: ideathon02,  alt: "Ideathon 2025" },
-  { src: workshop02,  alt: "Expert Session 2025" },
-  { src: induction04, alt: "FLUX Induction 2026" },
-  { src: ideathon04,  alt: "Ideathon 2025" },
-  { src: workshop04,  alt: "Expert Session 2025" },
-  { src: ideathon06,  alt: "Ideathon 2025" },
-  { src: workshop06,  alt: "Expert Session 2025" },
-  { src: ideathon08,  alt: "Ideathon 2025" },
-  { src: workshop08,  alt: "Expert Session 2025" },
-  { src: ideathon10,  alt: "Ideathon 2025" },
-  { src: ideathon11,  alt: "Ideathon 2025" },
-  { src: ideathon12,  alt: "Ideathon 2025" },
-  { src: ideathon13,  alt: "Ideathon 2025" },
-];
+// ─── DomeGallery image pool (180+ unique images ensuring zero repetitions across all 175 dome slots) ──
+const domeGalleryImages: { src: string; alt: string }[] = (() => {
+  const result: { src: string; alt: string }[] = [];
+  const otherItems = [
+    ...inductionGalleryData,
+    ...workshopGlobGalleryData,
+    ...ideathonGalleryData,
+  ];
+
+  let otherIdx = 0;
+  let bbIdx = 0;
+
+  // Interleave other categories with ByteBrawl photos to produce 180 unique tiles
+  while (result.length < 180 && (bbIdx < bytebrawlGalleryData.length || otherIdx < otherItems.length)) {
+    if (result.length % 5 === 1 && otherIdx < otherItems.length) {
+      const item = otherItems[otherIdx++];
+      result.push({ src: item.thumbnail || item.image, alt: item.title || item.category });
+    } else if (bbIdx < bytebrawlGalleryData.length) {
+      const item = bytebrawlGalleryData[bbIdx++];
+      result.push({ src: item.thumbnail || item.image, alt: item.title || item.category });
+    } else if (otherIdx < otherItems.length) {
+      const item = otherItems[otherIdx++];
+      result.push({ src: item.thumbnail || item.image, alt: item.title || item.category });
+    }
+  }
+
+  return result;
+})();
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const categories = ["All", "ByteBrawl", "Ideathon", "Workshops", "Induction"] as const;
