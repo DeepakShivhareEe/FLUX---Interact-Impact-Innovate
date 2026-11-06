@@ -55,6 +55,11 @@ Thumbs.db
 coverage/
 
 .freebuff/
-chatbot-content/
+# chatbot-content/ is the FLUX AI knowledge corpus consumed by the backend
+# retriever (backend/services/knowledge.js) — it ships with the repo so git
+# deployments serve grounded answers. Regenerate with:
+#   node scripts/export-chatbot-content.mjs
 .vercel
 Frontend/src/assets/images_originals_backup/
+screenshots/
+reports/
